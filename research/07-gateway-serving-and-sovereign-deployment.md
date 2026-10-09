@@ -1,4 +1,4 @@
-# 07 — Multi-Tenant AI Gateway, Model Serving & Sovereign Deployment
+# Multi-Tenant AI Gateway, Model Serving & Sovereign Deployment
 
 *Research snapshot: 2026-10-02. Scope: the Caliban data plane (gateway), on-prem model serving, and "sovereign router" deployment.*
 

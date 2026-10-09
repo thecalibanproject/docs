@@ -1,6 +1,6 @@
 # Repos & Conventions
 
-All repos live side by side under `~/caliban/`. Each one is its own git repository.
+All repos live side by side under `~/caliban/`. Each one is its own git repository, published in the [thecalibanproject](https://github.com/thecalibanproject) GitHub organization.
 
 | Repo | Language | What it is |
 |---|---|---|
@@ -11,11 +11,12 @@ All repos live side by side under `~/caliban/`. Each one is its own git reposito
 | `sdk-python/` | Python | `caliban-sdk`: the same surface in Python, plus an eval harness for nodes and golden sets. |
 | `ml/` | Python | Offline training and export: intent/router heads, PII NER evaluation and fine-tuning, BYO-model probe sets. Its only output to `core` is **ONNX + JSON** artifacts. |
 | `deploy/` | Compose, Helm, shell | On-prem first: docker-compose stack, Helm chart, air-gap bundle scripts, example configs. |
+| `website/` | Astro (static) | Product and architecture site. Renders the notes in `docs/` and the API contract from `core/` at build time. |
 
 ## Product decisions (2026-10-02)
 - **BYOK only.** Customers bring their own provider keys, or their own local model endpoints. Caliban never pools upstream credentials. This also removes the KeyPooling cross-tenant cache leak by construction.
 - **100% on-prem capable.** Every component, including the control plane, the web UI and every model, must run with **zero egress**. SaaS is the same software run by us.
-- **Licensing (2026-10-03):** `sdk-typescript` and `sdk-python` are Apache-2.0; `core`, `web`, `ml`, `deploy`, `docs` and `website` are proprietary (all rights reserved). Copyright 2026 Elie Sfeir. The PII NER model's CC-BY-SA fine-tuning-data item was signed off by Elie Sfeir on 2026-10-03 (recorded in the artifact manifest).
+- **Licensing (2026-10-03):** `sdk-typescript` and `sdk-python` are Apache-2.0; `core`, `web`, `ml`, `deploy`, `docs` and `website` are proprietary and source-available (public for reference; all rights reserved, use only under written agreement). Copyright 2026 Elie Sfeir. The PII NER model's CC-BY-SA fine-tuning-data item was signed off by Elie Sfeir on 2026-10-03 (recorded in the artifact manifest).
 - Dependencies must be licensed for on-prem redistribution: Postgres, Qdrant (Apache-2.0), Valkey (BSD) and DataFusion (Apache-2.0) are fine. SSPL, BSL and non-commercial weights are not allowed in the default bundle.
 
 ## Runtime conventions

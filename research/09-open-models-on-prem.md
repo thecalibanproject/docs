@@ -1,4 +1,4 @@
-# 09 — Open-Weight Models On-Prem: Qwen and Friends
+# Open-Weight Models On-Prem: Qwen and Friends
 
 *Research snapshot: 2026-10-02. Scope: which open-weight chat, embedding and reranker models an on-prem Caliban site should run, under which licence, on which engine, with which flags, and on how much hardware.*
 
