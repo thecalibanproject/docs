@@ -279,14 +279,24 @@ Rationale for this order:
   - Implemented and tested in `core/crates/caliban-ontology`.
 - **Ontology store = Postgres** (append-only, versioned, gated by golden-set evals), compiled into an in-memory graph in the data-plane snapshot. Oxigraph is used only for RDF/OWL import/export.
 
+**Made (2026-10-09):**
+- **Spice.ai / WrenAI: compete.** Caliban builds its own semantic layer, CQIR compiler and change-stream replica; it does not fork or embed either project. Their public designs are reference material only.
+- **Node journal: a minimal Postgres journal, built in `caliban-nodes`.** It follows the Absurd model: one SQL schema, steps checkpointed as rows, workers claiming runs with `SELECT ... FOR UPDATE SKIP LOCKED`, durable sleeps and awaited events. Reasons:
+  - Postgres is already the control-plane store, so nodes add no new stateful service to an on-prem or air-gapped install.
+  - The Restate server is BSL 1.1. Its additional use grant forbids a "Public Restate Platform Service" and does not clearly cover a product that customers run on their own hardware, where their services register endpoints; that is legal risk for a product whose core promise is on-prem redistribution.
+  - The Rust Postgres libraries are too young to depend on: DBOS Transact for Rust is early and documents at-least-once side effects; tensorzero/durable was archived in June 2026.
+  - Side effects (LLM calls, tool calls) carry an idempotency key derived from (run id, step id), so a replayed step never repeats a charged call or an external write.
+- **Pricing: flat price for `caliban/auto`.** Routing quality and cost are Caliban's margin risk, so metering records the routed model's real cost next to the flat price per request, and the router enforces a quality floor per intent before choosing the cheapest model.
+- **Surrogate scope default: per tenant.** The same value in the same tenant always gets the same surrogate (keyed HMAC per tenant), so pseudonymised requests can hit the cache. The cost is that sessions within a tenant become linkable through their surrogates; session scope stays available as a per-tenant opt-in. Surrogates never cross tenants.
+
 **Still open:**
 
-1. **Spice.ai / WrenAI: fork, embed or compete?** This decides the shape of P2. Spice.ai OSS already ships Rust change-stream replication from MongoDB, which makes this more urgent.
-2. **Journal backend for nodes:** Restate (check its licence for air-gapped redistribution) or a minimal Postgres journal.
+1. ~~Spice.ai / WrenAI~~: decided, compete.
+2. ~~Journal backend for nodes~~: decided, Postgres journal.
 3. ~~Upstream identity model~~: decided, BYOK only.
-4. **Pricing model:** flat price for `caliban/auto` (routing manipulation then becomes Caliban's margin risk), or pass-through plus a fee (OpenRouter and Cloudflare charge about 5%).
+4. ~~Pricing model~~: decided, flat price for `caliban/auto`.
 5. **Canonical metric format:** MetricFlow/OSI (Apache Ossie, incubating) as the canonical format, or CSM as a superset of it.
-6. **Surrogate scope default:** session (safer) or tenant (higher cache hit rate, but sessions become linkable).
+6. ~~Surrogate scope default~~: decided, per tenant.
 
 ## 10. Known research gaps
 
