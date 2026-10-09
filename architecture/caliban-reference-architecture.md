@@ -288,6 +288,8 @@ Rationale for this order:
   - Side effects (LLM calls, tool calls) carry an idempotency key derived from (run id, step id), so a replayed step never repeats a charged call or an external write.
 - **Pricing: flat price for `caliban/auto`.** Routing quality and cost are Caliban's margin risk, so metering records the routed model's real cost next to the flat price per request, and the router enforces a quality floor per intent before choosing the cheapest model.
 - **Surrogate scope default: per tenant.** The same value in the same tenant always gets the same surrogate (keyed HMAC per tenant), so pseudonymised requests can hit the cache. The cost is that sessions within a tenant become linkable through their surrogates; session scope stays available as a per-tenant opt-in. Surrogates never cross tenants.
+- **Cache hits on `caliban/auto` are billed at a discounted flat price.** No model is called, so the customer is charged a configurable fraction of the flat price (in the 10 to 25% range), and metering records the hit next to the full price so the saving is visible in usage.
+- **SSO and roles come before P3.** Node permissions (effective permissions = node grants ∩ invoker grants ∩ tenant policy) build on real identities and roles, so OIDC login and RBAC replace the bootstrap admin token before the node executor is built.
 
 **Still open:**
 
