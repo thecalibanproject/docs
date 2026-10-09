@@ -28,7 +28,7 @@ All repos live side by side under `~/caliban/`. Each one is its own git reposito
 | Config file | `CALIBAN_CONFIG` (TOML), default `/etc/caliban/caliban.toml` |
 | Admin auth (bootstrap) | `Authorization: Bearer $CALIBAN_ADMIN_TOKEN`. OIDC comes later. |
 | Tenant API keys | `cal_<random>`, sent as `Authorization: Bearer cal_…` (OpenAI SDKs) or `x-api-key: cal_…` (Anthropic SDKs, `/v1/messages`). Only the SHA-256 hex hash is stored. |
-| BYOK at rest | AES-256-GCM, with the KEK from `CALIBAN_KEK` (base64, 32 bytes) or an HSM/KMS later |
+| BYOK at rest | Envelope encryption, AES-256-GCM: tenant secrets (BYOK keys, datasource credentials) are sealed under a per-tenant DEK, and each DEK is wrapped by the KEK from `CALIBAN_KEK` (base64, 32 bytes). `CALIBAN_KEK_PREVIOUS` holds retired KEKs for opening only; `caliban keys rotate` re-wraps under the current KEK and `caliban keys status` shows which retired KEKs are still needed. Deleting a tenant destroys its DEK. HSM/KMS backends later |
 | Postgres | `CALIBAN_DATABASE_URL` (control-plane store; unset = in-memory dev store). The config file seeds an empty database once; after that the database is the source of truth for tenants, keys, BYOK, providers, models, routes. Migrations run at startup. |
 | Audit log | Every control-plane mutation appends a hash-chained `audit_log` row; `GET /api/v1/audit?limit=` (admin) |
 | Split mode (CP) | `CALIBAN_SNAPSHOT_SIGNING_KEY` (base64 Ed25519 seed, `caliban gen-signing-key`) + `CALIBAN_ROUTER_TOKEN` enable `GET /api/v1/snapshot` (router token, ETag/304) |
