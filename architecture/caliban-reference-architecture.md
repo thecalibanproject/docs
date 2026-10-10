@@ -291,6 +291,14 @@ Rationale for this order:
 - **Cache hits on `caliban/auto` are billed at a discounted flat price.** No model is called, so the customer is charged a configurable fraction of the flat price (in the 10 to 25% range), and metering records the hit next to the full price so the saving is visible in usage.
 - **SSO and roles come before P3.** Node permissions (effective permissions = node grants ∩ invoker grants ∩ tenant policy) build on real identities and roles, so OIDC login and RBAC replace the bootstrap admin token before the node executor is built.
 
+**Made (2026-10-10), P3 nodes ([plan](p3-nodes-plan.md)):**
+- **Nodes run in a `worker` role of the same binary** with access to the Postgres journal. Routers forward node runs to workers and still need no database; standalone mode runs everything in one process.
+- **Plans use Caliban's own JSON plan IR**, validated in Rust against the node's tools and budgets before anything runs.
+- **Taint rules by default, CaMeL opt-in.** Every node with write tools gets taint labels and "no write with tainted arguments without an allowlist entry or human approval". Full CaMeL-secure is an opt-in template.
+- **No per-run fee for now.** A node run costs the sum of its model calls at their normal prices; usage reports cost per run and per node.
+- **MCP and HTTP exposure first, A2A at the end of P3.**
+- **A triage node is the first reference node**, built alongside the executor as the test case and demo.
+
 **Still open:**
 
 1. ~~Spice.ai / WrenAI~~: decided, compete.
