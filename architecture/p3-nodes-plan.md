@@ -1,6 +1,6 @@
 # P3 plan: nodes
 
-*Approved 2026-10-10. Built from the reference architecture ([§5.3](caliban-reference-architecture.md#53-nodes-agents--sub-apps), [§8](caliban-reference-architecture.md#8-phased-roadmap)), research note [04](../research/04-agent-orchestration.md), and the state of `core` at `8c1af74`. Status updated 2026-10-11 against `core` at `e61478e`.*
+*Approved 2026-10-10. Built from the reference architecture ([§5.3](caliban-reference-architecture.md#53-nodes-agents--sub-apps), [§8](caliban-reference-architecture.md#8-phased-roadmap)), research note [04](../research/04-agent-orchestration.md), and the state of `core` at `8c1af74`. Status updated 2026-10-11 against `core` at `e61478e`. Decisions 8 to 17 made 2026-10-11.*
 
 **Goal (from the roadmap):** "Build AI sub-apps." A customer declares a node (prompt, tools, datasource scopes, budgets), publishes a version, and calls it over HTTP or MCP, or lets `caliban/auto` pick it.
 
@@ -46,9 +46,9 @@ The reference triage node (decision 6) runs end to end in the tests, against a r
 | M2 (not in the plan) | A model call refused by a tenant quota (429) makes the run sleep durably until `Retry-After`. Retiring a version lets runs in flight finish on it. Workers check the schema and never migrate. |
 | M4: RAG search as a built-in tool | Not built. `caliban-rag` has no retriever yet. The `retrieved` taint label is reserved for it. |
 | M4: datasource tool | Built, read only, on the native MongoDB lane only (other kinds are refused until their lane exists). Entities with a row-level policy are refused, because a node run has no user principal. At most 200 rows. |
-| M4: egress "private IPs blocked" | Built differently. Link-local and cloud metadata addresses are always refused. Loopback only when the deployment allows it. Private ranges are allowed, because on-prem tool servers live there: registering a server is the allowlist. No redirects, no proxy, DNS pinned per connection. |
+| M4: egress "private IPs blocked" | Built differently, and the plan now follows `core` (decision 15). Link-local and cloud metadata addresses are always refused. Loopback only when the deployment allows it. Private ranges are allowed, because on-prem tool servers live there: registering a server is the allowlist. No redirects, no proxy, DNS pinned per connection. |
 | M4: MCP servers | Streamable HTTP only. No stdio servers, so the gateway never spawns processes. |
-| M4: taint labels | Labels are `tool:<server>/<tool>`, `datasource`, `retrieved` and `pii`. There is no label for values from other tenants: tenant data never crosses tenants. |
+| M4: taint labels | Labels are `tool:<server>/<tool>`, `datasource`, `retrieved` and `pii`. There is no label for values from other tenants: tenant data never crosses tenants. A `caller` label for untrusted caller input (decision 8) is in progress in `core` (branch `p3-hardening`). |
 | M5: MCP Tasks | Behind `CALIBAN_MCP_TASKS`, and they need the `2026-07-28` protocol. A human step in a synchronous `tools/call` is answered through the run API. |
 | M5 (not in the plan) | `node/<name>` also works on the messages API. Run listing and cancellation on the data plane. Cancelling from the console is not built. |
 | M6: fallback | As planned, with the reason in `x-caliban-route-fallback` (`low_confidence`, `no_node_for_intent`, `node_not_allowed`, `node_unavailable`, `nodes_not_enabled`, `node_over_budget`, `node_input_invalid`). Routes come from the config file, overridden per intent on the control plane. |
@@ -68,10 +68,11 @@ The reference triage node (decision 6) runs end to end in the tests, against a r
 | Evals as a promotion gate, injection suite in CI | | Not started. |
 | A2A, `code` vertices (WASM) | | Not started. |
 
-**Research delta 2026-10-11.** A delta check of the research notes found no protocol change that touches this plan: no new MCP revision, no A2A release, and `core` already pins the latest rmcp (`=3.5.1`). Three new security results (preprints) bear on the injection suite. The decisions below are unchanged.
+**Research delta 2026-10-11.** A delta check of the research notes found no protocol change that touches this plan: no new MCP revision, no A2A release, and `core` already pins the latest rmcp (`=3.5.1`). Three new security results (preprints) bear on the injection suite. Decisions 1 to 7 are unchanged. The delta led to decisions 8 to 17.
 - **Note changes.** [Note 04](../research/04-agent-orchestration.md) now describes a two-stage Security CI (fixed cases gate, an adaptive stage runs on a schedule), single-use approvals with `allow_tainted` treated as standing authority, labelled caller input at the edge, and the corrected MCP revision (`2026-07-28`). Notes [01](../research/01-semantic-caching-and-rust-vector-stack.md), [05](../research/05-anonymization-and-privacy.md), [07](../research/07-gateway-serving-and-sovereign-deployment.md) and [09](../research/09-open-models-on-prem.md) add per-tenant namespaces for shared KV tiers and vLLM v0.31.0+ for pools mixing LoRA and `cache_salt`.
-- **Already in flight in `core` (injection suite work for M8):** the suite kind for an adaptive stage is reserved now, while migration 0024 is still unpushed; suite runs use each node's real `allow_tainted` allowlist, not an empty one; cases cover residual-authority replay (a benign run uses an allowlisted write, an injected run reuses it) and subnodes (the injection reaches a parent through a tool, the write happens in the child); and utility under attack is reported next to the attack success rate.
-- **Awaits a founder decision:** a `caller` taint label for external run inputs (HTTP, MCP `tools/call`, later A2A data parts), for example from an input field the schema marks `x-caliban-untrusted: true`. Without it an external agent can launder web or email content into trusted input. This is executor and spec work, not eval work, and could wait until A2A, but it is cheapest while the label set is small.
+- **In progress in `core` (branch `p3-hardening`), injection suite work for M8:** the suite kind for an adaptive stage is reserved now, while migration 0024 is still unpushed; suite runs use each node's real `allow_tainted` allowlist, not an empty one; cases cover residual-authority replay (a benign run uses an allowlisted write, an injected run reuses it) and subnodes (the injection reaches a parent through a tool, the write happens in the child); and utility under attack is reported next to the attack success rate.
+- **Decided 2026-10-11 (decision 8), in progress in `core` (branch `p3-hardening`):** a `caller` taint label for external run inputs (HTTP, MCP `tools/call`, later A2A data parts), for example from an input field the schema marks `x-caliban-untrusted: true`. Without it an external agent can launder web or email content into trusted input. It is done now, while the label set is small.
+- **Also decided 2026-10-11:** decisions 9 to 17, from the same delta check (eval key, promotion bar, URL read tools, subnode pins, eval retention, PII on the Anthropic path, egress, routing hardening, `cache_salt`).
 
 ## Principles
 
@@ -131,10 +132,10 @@ Each milestone is one batch of work that can be shipped and tested. They are in 
   - RAG search;
   - calling another node.
 - Per-call tokens minted for (tenant, node, tool), bound to an audience and down-scoped. Client tokens are never passed through.
-- Egress allowlist with private IPs blocked (SSRF).
+- Egress (SSRF): registering a tool server is the allowlist. Private ranges are allowed for registered servers, because on-prem customers' tool servers live on private networks. Link-local and cloud metadata addresses are always blocked. Loopback only when the deployment opts in (decision 15).
 - Taint (CaMeL-lite):
-  - values from tool outputs, retrieved documents and other tenants are labelled;
-  - `effect: write` with tainted arguments needs an allowlist entry or a human approval;
+  - values from tool outputs, retrieved documents and other tenants are labelled, and so is caller input marked untrusted (`caller`, decision 8);
+  - `effect: write` with tainted arguments needs an allowlist entry or a human approval, and so does a read tool that takes a URL (decision 11);
   - `pii`-labelled values never leave through an egress the policy does not allow.
 - PII surrogates stay in place across tool calls. Values are rehydrated only for tools the tenant marks as trusted.
 
@@ -170,7 +171,8 @@ Each milestone is one batch of work that can be shipped and tested. They are in 
 - Evals:
   - golden sets per node;
   - pass^k over k runs, cost per success and p95 latency, with an accuracy × cost chart across routing policies;
-  - a version can be promoted only if its eval passes the bar set on the node.
+  - a version can be promoted only if its eval passes the bar set on the node with `nodes.publish` (decision 10);
+  - evals run with a per-tenant eval key that the control plane manages (decision 9).
 - Security CI: an AgentDojo-style injection suite runs against every node version that has write tools. The pass rate is a promotion gate.
 - Console:
   - node list, versions and diff;
@@ -190,7 +192,7 @@ Each milestone is one batch of work that can be shipped and tested. They are in 
 
 Each needs P3 to exist first, and none of them is needed for the exit criteria.
 
-## Decisions (1 to 6 made 2026-10-10, 7 made 2026-10-11)
+## Decisions (1 to 6 made 2026-10-10, 7 to 17 made 2026-10-11)
 
 | # | Question | Decision |
 |---|---|---|
@@ -201,6 +203,18 @@ Each needs P3 to exist first, and none of them is needed for the exit criteria.
 | 5 | **A2A in P3?** | MCP and HTTP first, because every client already speaks them. A2A at the end of P3, in M8, mostly for long-running and cross-organization nodes. |
 | 6 | **First reference node** | Build one real node alongside M2 to M6 as the test case: a triage node (classify the case, ask a clarifying question through the human step, recommend services from a catalogue tool, with PII masked throughout). It doubles as the demo for the health platform conversation. |
 | 7 | **What comes after M6?** (2026-10-11) | The M8 evals (golden sets per node, pass^k, cost per success, the promotion bar) and the AgentDojo-style injection suite in CI come next, before M7, because they are the P3 exit criteria. Then M7, then the rest of M8, then the AWS run. |
+| 8 | **A `caller` taint label?** (2026-10-11) | Yes. Callers of the run APIs can mark input as untrusted caller data, and it enters the run labelled `caller`. A2A data parts will map to it. |
+| 9 | **Which key do evals use?** (2026-10-11) | A per-tenant eval key that the control plane manages. |
+| 10 | **Where is the promotion bar set?** (2026-10-11) | Per node, set with `nodes.publish`, not in the spec. A bar in the spec would let a version lower its own bar. |
+| 11 | **Read tools that take URLs?** (2026-10-11) | Tainted arguments to them are gated like writes: an allowlist entry or a human approval. |
+| 12 | **Pinned subnode versions?** (2026-10-11) | A pinned subnode version must have passed its own promotion gate. |
+| 13 | **Eval retention?** (2026-10-11) | Eval summaries are kept. Trial detail is purged with run retention. |
+| 14 | **PII on tool calls, Anthropic path?** (2026-10-11) | The tool-call PII protection also applies on the Anthropic native path. |
+| 15 | **Egress for tool servers?** (2026-10-11) | Keep `core`'s rule. Registering a tool server is the allowlist, so private ranges are allowed for registered servers. Link-local and cloud metadata addresses are always blocked. Loopback only when the deployment opts in. The reason: on-prem customers' tool servers live on private networks. |
+| 16 | **Routing hardening?** (2026-10-11) | A routing policy is promoted only if it beats a random two-model mix at matched cost. Routing decision logs are content-class data. Escalation budgets are per API key. See [note 02](../research/02-intent-classification-and-routing.md#learning-the-router-from-production-feedback). |
+| 17 | **Client-supplied `cache_salt`?** (2026-10-11) | Core always strips it. |
+
+Decision 15 keeps what `core` already does. The work for the others is in progress in `core` (branch `p3-hardening`), not done.
 
 ## Order of work
 

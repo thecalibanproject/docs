@@ -303,6 +303,7 @@ Rationale for this order:
 
 **Made (2026-10-11), P3 nodes ([plan](p3-nodes-plan.md)):**
 - **Evals before templates.** With M1 to M6 built, the evals (golden sets, pass^k, cost per success, the promotion bar) and the injection suite in CI come next, because they are the P3 exit criteria. Templates and the plan cache (M7) follow.
+- **Hardening from the 2026-10-11 delta check** (plan decisions 8 to 17): a `caller` taint label for untrusted caller input, a per-tenant eval key, the promotion bar set per node with `nodes.publish`, tainted URL arguments to read tools gated like writes, subnode pins that passed their own gate, PII protection on the Anthropic path, `core`'s egress rule (registered tool servers may be on private ranges), routing promotion against a random two-model baseline, and `cache_salt` always stripped.
 
 **Still open:**
 
