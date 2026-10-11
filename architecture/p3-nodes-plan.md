@@ -68,6 +68,11 @@ The reference triage node (decision 6) runs end to end in the tests, against a r
 | Evals as a promotion gate, injection suite in CI | | Not started. |
 | A2A, `code` vertices (WASM) | | Not started. |
 
+**Research delta 2026-10-11.** A delta check of the research notes found no protocol change that touches this plan: no new MCP revision, no A2A release, and `core` already pins the latest rmcp (`=3.5.1`). Three new security results (preprints) bear on the injection suite. The decisions below are unchanged.
+- **Note changes.** [Note 04](../research/04-agent-orchestration.md) now describes a two-stage Security CI (fixed cases gate, an adaptive stage runs on a schedule), single-use approvals with `allow_tainted` treated as standing authority, labelled caller input at the edge, and the corrected MCP revision (`2026-07-28`). Notes [01](../research/01-semantic-caching-and-rust-vector-stack.md), [05](../research/05-anonymization-and-privacy.md), [07](../research/07-gateway-serving-and-sovereign-deployment.md) and [09](../research/09-open-models-on-prem.md) add per-tenant namespaces for shared KV tiers and vLLM v0.31.0+ for pools mixing LoRA and `cache_salt`.
+- **Already in flight in `core` (injection suite work for M8):** the suite kind for an adaptive stage is reserved now, while migration 0024 is still unpushed; suite runs use each node's real `allow_tainted` allowlist, not an empty one; cases cover residual-authority replay (a benign run uses an allowlisted write, an injected run reuses it) and subnodes (the injection reaches a parent through a tool, the write happens in the child); and utility under attack is reported next to the attack success rate.
+- **Awaits a founder decision:** a `caller` taint label for external run inputs (HTTP, MCP `tools/call`, later A2A data parts), for example from an input field the schema marks `x-caliban-untrusted: true`. Without it an external agent can launder web or email content into trusted input. This is executor and spec work, not eval work, and could wait until A2A, but it is cheapest while the label set is small.
+
 ## Principles
 
 1. **Every model call a node makes goes back through the gateway pipeline.** PII, cache, routing, quotas, metering and tracing then apply to node traffic for free, and a node can never reach a provider by a side door.

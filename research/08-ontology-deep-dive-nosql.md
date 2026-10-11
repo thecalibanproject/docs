@@ -2,12 +2,14 @@
 
 *Research date: 2026-10-02. Second pass on [03](03-ontology-and-datasource-layer.md), closing the text-to-NoSQL gap listed in [reference architecture §10](../architecture/caliban-reference-architecture.md#10-known-research-gaps). Trigger: target customers run their "warehouse" on MongoDB.*
 
+*Delta check 2026-10-11: added AptMQL-Bench (best model 57 to 70% on realistic document schemas, so compiling still beats generating); `$jsonSchema` trust now depends on `validationLevel`, with MongoDB 9.0's new `constraint` level; MongoDB 9.0 memory-cap errors re-route instead of going to LLM repair; server-side JS rationale updated.*
+
 **Summary.**
 
 **(A) MongoDB as the source.** Keep MongoDB as the customer's system of record, but do not use it as the engine for heavy analytics, and never let the LLM write MQL directly. The evidence is consistent:
 
 - **Text-to-MQL accuracy.** It is the weakest of SQL, Cypher and MQL in a controlled multi-model benchmark (SM3: MQL 30–40% vs SQL 49–58% with the same models).
-- **Schema-less collections.** On realistic MongoDB-native data, the best published solver reaches 35.8%. A schema-only prompt reaches 0.2% (TEND v3).
+- **Schema-less collections.** On realistic MongoDB-native data, the best published solver reaches 35.8%. A schema-only prompt reaches 0.2% (TEND v3). On access-pattern document schemas, the best model reaches 57.4% without evidence and 70.3% with it (AptMQL-Bench, 2026-10 preprint), so free-form MQL still fails about 30% of the time with curated evidence.
 - **Speed.** On ClickBench, MongoDB took about 19,100 s across 43 analytic queries. DataFusion-on-Parquet took 46 s and ClickHouse 18 s on the same instance type.
 - **MongoDB's own SQL and BI paths.** They are gone for on-prem customers: the BI Connector reached end of life in September 2026, the SQL Interface needs Enterprise Advanced or Atlas, and Data Federation is Atlas-only. Cube's MongoDB support depends on the BI Connector.
 
@@ -36,6 +38,7 @@ An ontology is a small metadata graph (10³–10⁵ nodes). It needs versioning 
 | Source | Year | Core idea | Numbers | Relevance | Verdict |
 |---|---|---|---|---|---|
 | [TEND + SAG (Text-to-NoSQL)](https://arxiv.org/abs/2502.11201) ([v3 HTML](https://arxiv.org/html/2502.11201v3)) | 2025–26 | MongoDB-native benchmark: 1,210 tasks, 11 DBs, nested arrays, sparse paths, polymorphism, dynamic keys. SAG = schema-as-data grounding from stored docs → bounded MQL → execution repair → consistency selection. | DeepSeek-V4-Flash backbone: schema-only direct **0.2%**, sampled-doc direct 28.6%, ReAct 30.8%, **SAG 35.8%** EXC. 61.5% of failures are "wrong rows" (the pipeline runs but returns wrong data). Dynamic-key maps appear in 83.7% of tasks. | Shows the problem with free-form MQL. **Schema descriptions alone are useless; you need document evidence plus execution checks.** Failures are silent. | Adopt (as eval + grounding ideas) |
+| [AptMQL-Bench](https://arxiv.org/abs/2610.02770) (Nguyen, Rezvani, Vujanic; Univ. of Sydney and MongoDB Research; preprint) | 2026 | BIRD converted to access-pattern document schemas designed by coding agents with human checks; 21 DBs, 3,186 requests. | Opus 4.5 57.4% → 70.3% Soft-EX with evidence (Strict-EX 38.5 → 50.4). GPT-OSS-120B 44.5 → 62.5, Gemma-4-31B 46.7 → 62.0, Llama-3.1-70B 24.9 → 37.1. TEND-v2's FK-embedding conversion fails on 6 of 21 BIRD DBs, silently drops up to 25.9% of rows, and its gold queries run more than 10x slower at scale. Of 100 Opus errors, 37 are defensible alternatives, so EX understates accuracy. | The most realistic MQL schemas published. Even the best model with curated evidence fails about 30% of the time, which supports compiling over generating. Use it as an eval seed. To be released under CC BY-SA 4.0 (no repository yet): check the terms before redistributing derived sets. | Adopt (as eval) |
 | [EvoMQL (Draft-Refine-Optimize)](https://arxiv.org/abs/2604.13045) | 2026 | Self-evolving NL2MQL: query-aware evidence retrieval + RL with execution rewards; 3B active params. | 76.6% on MongoDB "EAI" set, **83.1% on TEND** (not comparable with TEND v3's 35.8%; different version and metric). | A small on-prem model can be specialized for MQL, which matters for the sovereign SKU. Only useful if raw MQL is ever needed. | Watch |
 | [MongoDB NL→mongosh benchmark](https://huggingface.co/datasets/mongodb-eai/natural-language-to-mongosh) | 2025 | MongoDB's own eval: 766 cases, 8 Atlas sample DBs, 9 models, prompt-strategy ablation. | Claude 3.7 Sonnet 86.7% avg, GPT-4o 82.5%, Mistral Large 2 71.3%. Annotated schemas and sample docs help. Agentic mode costs 3.5× time and 8.94× tokens. | The optimistic upper bound: Atlas sample DBs are public (contamination risk) and simple. Annotated schema = what the ontology provides. | Adopt (prompt findings), distrust headline |
 | [SM3-Text-to-Query](https://arxiv.org/abs/2411.05521) ([HTML](https://arxiv.org/html/2411.05521v2)) | 2024 | Same medical data in Postgres, MongoDB, Neo4j and GraphDB; 10K Q/query pairs per language. | 5-shot with schema, Llama3-70b: SQL 57.5, Cypher 57.1, **MQL 40.4**, SPARQL 30.5. GPT-3.5: SQL 56.3, **MQL 35.1**. | The only controlled comparison across query languages on identical data. **LLMs are 15–20 pts worse at MQL than SQL.** Argues for compiling to MQL, not generating it. | Adopt (core evidence) |
@@ -51,7 +54,7 @@ An ontology is a small metadata graph (10³–10⁵ nodes). It needs versioning 
 **Text-to-SQL vs text-to-MQL, the numbers side by side.**
 - On controlled, identical data, MQL trails SQL by 15–20 pts (SM3).
 - MQL is solved at 83–87% only on public or simple sample DBs (MongoDB eval, EvoMQL).
-- MQL drops to 0.2–36% on MongoDB-native complex documents (TEND v3).
+- MQL reaches 0.2–36% (TEND v3) to 57 to 70% (AptMQL-Bench, frontier model, with evidence) on realistic document schemas. AptMQL's schemas are designed from access patterns, which is closer to real deployments than TEND's FK-embedding conversion.
 - The 03 enterprise text-to-SQL numbers (10–16% raw → 54–72% with an ontology → 98–100% in a governed semantic layer) suggest the same lever applies. The ontology plus a compiler gives most of the gain whatever the target language.
 
 ---
@@ -122,10 +125,10 @@ An ontology is a small metadata graph (10³–10⁵ nodes). It needs versioning 
 | Control | Where | Source |
 |---|---|---|
 | Dedicated user with a **custom role**: `find`, `listCollections`, `listIndexes`, `collStats`, `dbStats` on approved DBs only. A **separate** CDC user with `changeStream` + `find`. Never `readWrite`. | Customer DB | [built-in roles](https://www.mongodb.com/docs/manual/reference/built-in-roles/) |
-| Recommend `security.javascriptEnabled: false` / `--noscripting`. **Independently**, the Caliban validator denies `$where`, `$function`, `$accumulator`, `mapReduce`. JS in `$where` can run arbitrary code and peg CPU (OWASP example: a 10 s busy loop). | Customer config + Caliban | [server-side JS](https://www.mongodb.com/docs/manual/core/server-side-javascript/), [`$where`](https://www.mongodb.com/docs/manual/reference/operator/query/where/), [OWASP WSTG NoSQL](https://github.com/OWASP/wstg/blob/master/document/4-Web_Application_Security_Testing/07-Injection/05.6-NoSQL_Injection.md) |
+| Recommend `security.javascriptEnabled: false` / `--noscripting`. **Independently**, the Caliban validator denies `$where`, `$function`, `$accumulator`, `mapReduce`. JS in `$where` can run arbitrary code and peg CPU (OWASP example: a 10 s busy loop). MongoDB 9.0 re-enables server-side JS on a WASM sandbox ([9.0 release notes](https://www.mongodb.com/docs/manual/release-notes/9.0/); the server-side JS page still describes MozJS). Sandboxing limits escape, not cost: a `$where` busy loop still burns a secondary's CPU, so the validator deny is unchanged. | Customer config + Caliban | [server-side JS](https://www.mongodb.com/docs/manual/core/server-side-javascript/), [`$where`](https://www.mongodb.com/docs/manual/reference/operator/query/where/), [OWASP WSTG NoSQL](https://github.com/OWASP/wstg/blob/master/document/4-Web_Application_Security_Testing/07-Injection/05.6-NoSQL_Injection.md) |
 | **Operator injection.** Literals come from typed IR values and are serialized as BSON scalars. Any `$`-prefixed key or Extended-JSON wrapper inside a literal is rejected. Field paths come only from ontology bindings, never from the LLM. | Caliban compiler | OWASP WSTG |
 | Stage allow-list: `$match`, `$project`/`$set`, `$unwind`, `$group`, `$sort`, `$limit`, `$count`, `$bucket`, `$lookup` (approved relations only), `$facet` (capped), `$setWindowFields` (capped). **Deny** `$out`, `$merge`, `$unionWith` (unless an approved relation), `$currentOp`, `$listSessions`, `$collStats`, `$documents`, unbounded `$graphLookup`. | Caliban validator | [limits](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-limits/) |
-| `maxTimeMS` on every op. Recommend the cluster `defaultMaxTimeMS` (8.0+) as a backstop. | Both | [maxTimeMS](https://www.mongodb.com/docs/manual/reference/method/cursor.maxTimeMS/) |
+| `maxTimeMS` on every op. Recommend the cluster `defaultMaxTimeMS` (8.0+) as a backstop, and on 9.0 per-shape `maxTimeMS` through `setQuerySettings` (FCV 9.0). | Both | [maxTimeMS](https://www.mongodb.com/docs/manual/reference/method/cursor.maxTimeMS/) |
 | `allowDiskUse: false` in the native lane. If a query would spill, it belongs on the replica. | Caliban | [limits](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-limits/) |
 | **Dry run with `explain` (`queryPlanner` verbosity**, which does not execute). Reject or re-route on `COLLSCAN` over large collections, unindexed `$lookup`, or a blocking `$sort` without an index. | Caliban planner | [explain](https://www.mongodb.com/docs/manual/reference/command/explain/) |
 | `comment: "caliban:<audit_id>"` on every command, so the customer's profiler and logs tie back to Caliban's audit record. | Caliban | — |
@@ -306,7 +309,7 @@ Both backends are generated from the same IR, so the two can be **shadow-compare
 6. **Dry run.** Native: `explain` with `queryPlanner`. SQL: DataFusion plan stats with byte-scan limits.
 7. **Execute** with timeouts, a row cap and streaming Arrow.
 8. **Result sanity.** Row count vs expected cardinality, null-rate, unit checks, verified-query fingerprint. The answer carries `as_of` (replica watermark or "live").
-9. **On failure,** explain the error back to the LLM in ontology terms (≤2 repair rounds), then answer "I don't know". Never fall back to raw MQL.
+9. **On failure,** explain the error back to the LLM in ontology terms (≤2 repair rounds), then answer "I don't know". Never fall back to raw MQL. Resource errors (`ExceededMemoryLimit`, `QueryExceededMemoryLimitNoDiskUseAllowed`, `MaxTimeMSExpired`, overload rejections) are **not** sent to the LLM: they are planning errors, not query-meaning errors. The planner re-routes the same IR to the replica, or answers "too expensive live" with the replica's `as_of`. MongoDB 9.0 (GA 2026-09-29) defines these memory-cap errors, adds `metrics.query.operationsFailedDueToMemoryLimit`, and its new workload management protects short operations first, so long analytic reads are the likely victims ([release notes](https://www.mongodb.com/docs/manual/release-notes/9.0/), [press release](https://www.mongodb.com/company/newsroom/press-releases/mongodb-launches-mongodb-9-0-the-best-version-ever-built-and-atlas-infinite-for-ai-scale-demand)).
 
 ### CDC acceleration policy
 
@@ -329,7 +332,9 @@ Both backends are generated from the same IR, so the two can be **shadow-compare
 **Algorithm (`Connector::introspect` + `profile` for MongoDB):**
 
 1. **Enumerate.** Run `listCollections` (type: collection, view or timeseries, plus `options.validator`), `listIndexes` and `collStats`.
-   - A `$jsonSchema` validator is treated as **declared** schema (high trust) ([docs](https://www.mongodb.com/docs/manual/core/schema-validation/)).
+   - A `$jsonSchema` validator is **declared** schema ([docs](https://www.mongodb.com/docs/manual/core/schema-validation/)). Trust depends on `validationLevel` ([levels](https://www.mongodb.com/docs/manual/core/schema-validation/specify-validation-level/)):
+     - `constraint` (9.0+) guarantees every document conforms (`collMod` scans and fails on violations; rules cannot be modified and `bypassDocumentValidation` is blocked), so covered paths skip type-histogram sampling and polymorphism review.
+     - `strict` and `moderate` allow legacy violations, so covered paths are still sampled, but the validator wins ties.
    - Unique indexes become candidate keys. Indexed paths become likely filter and join paths.
    - Views are resolved through their pipeline, as the Schema Builder does.
 2. **Sample (stratified, on a secondary, `maxTimeMS`).**
@@ -356,10 +361,10 @@ Both backends are generated from the same IR, so the two can be **shadow-compare
    - Candidates: ObjectId (or hex24 string) fields, plus `*Id`/`*_id` names.
    - For each candidate, take 1,000 sampled values and run `$in` against the target `_id` (indexed, cheap) to get a containment ratio. Accept as a candidate relation at ≥0.95. Cardinality comes from distinct ratios.
    - Detect **extended references** (a subdocument holding `_id` plus copied fields) and link the copies with `canonical_of`.
-6. **Mine usage.** Where the profiler (`system.profile`) or app query logs are available, extract `$group` keys and accumulators as metric candidates, and `$lookup` pairs as relation evidence (LinkedIn pattern from 03).
+6. **Mine usage.** Where the profiler (`system.profile`) or app query logs are available, extract `$group` keys and accumulators as metric candidates, and `$lookup` pairs as relation evidence (LinkedIn pattern from 03). Atlas M10+ tenants: mine [`$queryStats`](https://www.mongodb.com/docs/manual/reference/operator/aggregation/querystats/) shapes (group keys, `$lookup` pairs) as a profiler-free source. It stores shapes, never field values, but needs an extra `queryStatsRead` grant, kept off by default.
 7. **LLM proposal pass** (per collection cluster, compact M-Schema-style cards with 3 *redacted* sample documents). The LLM proposes names, descriptions, synonyms, PII classes, subtype names and metric candidates. Annotated schemas and sample documents are the strongest prompt components in MongoDB's own eval.
 8. **Human curation and eval gate.** Relations, subtypes, coercions and metrics need approval. Each commit runs the golden set (EvoOntology-style acceptance).
-9. **Give back.** Optionally generate a `$jsonSchema` for approved entities so the customer can install it with warn-only validation, which stops drift at the source.
+9. **Give back.** Optionally generate a `$jsonSchema` for approved entities so the customer can install it with warn-only validation, which stops drift at the source. Once drift is clean, the customer may move to `constraint` (9.0+), which gives Caliban a guaranteed schema.
 10. **Drift loop.**
     - Every 24 h, or continuously from the CDC stream at about 1% of events, re-profile the newest-K sample.
     - Diff against `bound_schema_hash`: new paths, presence shift > 10 pts, type-histogram PSI > 0.2, new discriminator values.
@@ -377,9 +382,9 @@ Both backends are generated from the same IR, so the two can be **shadow-compare
 | **Native queries hurting production** | Tagged secondary only, `maxTimeMS`, `explain` gate, `allowDiskUse: false`, per-tenant concurrency limit. Recommend `defaultMaxTimeMS`. |
 | **Data duplication / sovereignty objections** to the replica | Bound-path-only replication, per-binding `replicate` policy, encryption at rest with tenant keys (05), crypto-shred on disconnect. |
 | **Ontology misses document semantics** (array grain, same-element filters) | Compiler-enforced grain and explicit IR semantics. Golden-set cases for each trap in the table above. |
-| **Benchmark optimism** | MongoDB's own 83–87% is on public sample DBs. EvoMQL and TEND numbers vary by version. Use per-tenant golden sets only (03). |
+| **Benchmark optimism** | MongoDB's own 83–87% is on public sample DBs. EvoMQL and TEND numbers vary by version, and TEND-style FK-embedding conversions drop rows (AptMQL-Bench). Use per-tenant golden sets only (03). |
 | **Spice.ai overlap** (already ships MongoDB CDC → accelerators in Rust) | Decide fork/embed/compete (architecture §9.1). Caliban's moat is the document-aware ontology + IR + policy compiler, not CDC plumbing. |
-| **MongoDB 9.0+ behaviour changes** (per-operation memory cap) break native budgets | Version-aware planner. Read `serverStatus` memory metrics. Integration tests across 7.0/8.0/9.0. |
+| **MongoDB 9.0+ behaviour changes** (per-operation memory cap) break native budgets | Version-aware planner. Read `serverStatus` memory metrics. Resource errors re-route instead of going to LLM repair (validation step 9). Integration tests across 7.0/8.0/9.0; 7.0 reaches end of life on 2027-08-31 ([lifecycles](https://www.mongodb.com/legal/support-policy/lifecycles)). |
 | **Licence drift of dependencies** | Pin to Apache/MIT (DataFusion, Oxigraph, mongo driver, iceberg-rust). Avoid SSPL/BSL/AGPL components in the shipped binary. |
 
 ## Open questions
@@ -389,6 +394,7 @@ Both backends are generated from the same IR, so the two can be **shadow-compare
 3. **Embedded DuckDB vs DataFusion** for the accelerator: DuckDB is faster in ClickBench (26 s vs 46 s) but adds C++ and a second SQL dialect. Is the speed worth it?
 4. **Polymorphic coercion UX:** how much curation does an "unstable" collection need before it is useful? No published data.
 5. **Do customers really have no SQL path?** Survey design partners for Enterprise Advanced licences (SQL Interface) or Atlas (analytics nodes, Data Federation `$out` → Parquet as a snapshot shortcut).
-6. **Raw-MQL expert lane:** should it exist at all? If yes, gate it behind SAG-style grounding and an EvoMQL-class fine-tuned local model, and keep it off by default.
+6. **Raw-MQL expert lane:** should it exist at all? If yes, gate it behind SAG-style grounding and an EvoMQL-class fine-tuned local model, and keep it off by default. If it ever ships, gate it on AptMQL-Bench plus the tenant golden set.
 7. **Write-time copies:** when denormalized and canonical values disagree, which does the answer use by default, and do we tell the user?
 8. **Contributing upstream:** fix the DataFusion Mongo provider (`$sample`, struct/list types, Decimal128, aggregate pushdown) upstream, or keep a private fork?
+9. **CQIR on small sovereign models.** Small *prompted* models collapse on plan-style JSON (53% to 16% in [Royer et al. 2026](https://arxiv.org/abs/2609.33670), preprint). CQIR is a much smaller choice structure than a relational plan, but the sovereign SKU should keep schema-constrained decoding (llguidance) mandatory and budget a fine-tune for CQIR emission. How large is the gap on CQIR itself?

@@ -2,6 +2,8 @@
 
 *Research snapshot: 2026-10-02. Scope: which open-weight chat, embedding and reranker models an on-prem Caliban site should run, under which licence, on which engine, with which flags, and on how much hardware.*
 
+*Delta check 2026-10-11: pin vLLM v0.31.0+ for pools mixing LoRA and `cache_salt` (salt/adapter key collision fixed); EmbeddingGemma 2 is Apache-2.0; new 12 GB tier (Qwen3.5-9B GGUF or Mellum2.1); llama-server's default port moved to 9931; corrected the Meta row (Muse-Glimmer-30B). The default bundle is otherwise unchanged.*
+
 **Summary.** Qwen is the best-covered open family for Caliban's on-prem SKU. Every current
 Qwen line that matters for a gateway is **Apache-2.0**: Qwen3.5 (0.8B–397B), Qwen3.6
 (27B dense, 35B-A3B MoE) and **Qwen3.8-27B**. It also ships its own embedding and reranker
@@ -13,24 +15,27 @@ default bundle. Elsewhere, the permissive set is gpt-oss (Apache-2.0), Gemma 4 (
 (Apache-2.0), Phi-4 (MIT), the Mistral Small/Ministral/Devstral-Small line (Apache-2.0) and
 NVIDIA Nemotron 3.5 (OpenMDW-1.1). The models to flag are Mistral Medium 3.5 and Devstral 2 123B (revenue cap), MiniMax M2.7
 (non-commercial), MiniMax M3, Kimi K3 and GLM-5.3 (custom terms), Llama 4 (EU exclusion for
-the multimodal models), EmbeddingGemma and Gemma 3 (Gemma terms), and the Jina v5 embedder and Jina v3 reranker (CC-BY-NC).
+the multimodal models), the first EmbeddingGemma (300m) and Gemma 3 (Gemma terms), and the Jina v5 embedder and Jina v3 reranker (CC-BY-NC).
 
 On the serving side, three facts matter most to the gateway:
-1. **vLLM v0.30.0 returns reasoning in a `reasoning` field.** The field used to be called
+1. **vLLM v0.30.0 (and v0.31.0) returns reasoning in a `reasoning` field.** The field used to be called
    `reasoning_content`. SGLang and llama.cpp still use `reasoning_content`, and Ollama's
    OpenAI endpoint uses `reasoning`.
 2. **Prefix-cache isolation per tenant is real in both vLLM and SGLang** through a request
    `cache_salt`. vLLM limits it to 128 characters and rejects `/`, `@`, `\` and NUL, so use
-   base64url, not base64.
+   base64url, not base64. Before vLLM v0.31.0 a salt and a LoRA adapter name with the same
+   value hashed to the same key, so pin v0.31.0+ wherever LoRA and salts share a pool (§5).
 3. **Qwen3.5+ dropped the `/think` / `/no_think` soft switch.** Thinking is controlled only
    through `chat_template_kwargs.enable_thinking`. Qwen3.8 adds `reasoning_effort`.
 
 **Method.** Every model ID, licence, parameter count and context length below was read from the
 Hugging Face API (`/api/models/<id>`: `cardData.license`, `safetensors.total`, and `config.json`)
 or from the model card on 2026-10-02. Engine flags come from the source at release tags:
-[vLLM v0.30.0](https://github.com/vllm-project/vllm/tree/v0.30.0) (2026-09-22),
+[vLLM v0.30.0](https://github.com/vllm-project/vllm/tree/v0.30.0) (2026-09-22; deltas to
+[v0.31.0](https://github.com/vllm-project/vllm/releases/tag/v0.31.0), 2026-10-05, checked on 2026-10-11),
 [SGLang v0.5.21](https://github.com/sgl-project/sglang/tree/v0.5.21) (2026-10-02),
-[llama.cpp b11346](https://github.com/ggml-org/llama.cpp/tree/b11346) (container `server-b11347`),
+[llama.cpp b11346](https://github.com/ggml-org/llama.cpp/tree/b11346) (container `server-b11347`; deltas to
+[b11552](https://github.com/ggml-org/llama.cpp/compare/b11346...b11552) checked on 2026-10-11),
 [Ollama v0.35.0](https://github.com/ollama/ollama/tree/v0.35.0) and
 [TEI v1.9.4](https://github.com/huggingface/text-embeddings-inference/tree/v1.9.4).
 Sizes are on-disk safetensors or GGUF sizes from the HF tree API. VRAM figures are **estimates**.
@@ -92,11 +97,17 @@ it the fastest decoder per GPU and the best fit for CPU.
 | [Snowflake/snowflake-arctic-embed-l-v2.0](https://huggingface.co/Snowflake/snowflake-arctic-embed-l-v2.0) | 0.57B | 8192 | — | apache-2.0 | TEI, vLLM |
 | [Alibaba-NLP/gte-multilingual-reranker-base](https://huggingface.co/Alibaba-NLP/gte-multilingual-reranker-base), [mixedbread-ai/mxbai-rerank-large-v2](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v2) | 0.3B / 1.5B | 8k / 32k | — | apache-2.0 | TEI / vLLM (with override) |
 | ⚠ [jinaai/jina-embeddings-v5-text-small](https://huggingface.co/jinaai/jina-embeddings-v5-text-small), [jinaai/jina-reranker-v3](https://huggingface.co/jinaai/jina-reranker-v3) | 0.6B | — | — | **cc-by-nc-4.0** (non-commercial) | exclude |
+| [google/embeddinggemma-2](https://huggingface.co/google/embeddinggemma-2) (2026-10) | 0.74B (0.27B text only) | 8k | 768-d, MRL 128 to 768, text + image + video + audio | apache-2.0 (not gated) | llama.cpp b11452+ ([GGUF](https://huggingface.co/ggml-org/embeddinggemma-2-GGUF), [PR](https://github.com/ggml-org/llama.cpp/pull/30054)). vLLM main only ([#60254](https://github.com/vllm-project/vllm/pull/60254)), and it fails at start-up on RTX and L4 cards until [#60942](https://github.com/vllm-project/vllm/pull/60942) lands. Not in TEI. Use BF16 or FP32, never FP16. |
 | ⚠ [google/embeddinggemma-300m](https://huggingface.co/google/embeddinggemma-300m) | 0.3B | — | — | **gemma** (Gemma terms, gated) | exclude by default |
 
 **Embedding dimension is a schema decision.** Qdrant collections are created for one
 dimension. Switching from Qwen3-Embedding-0.6B (1024) to 8B (4096) means re-indexing, unless
 you use MRL truncation to 1024. Pick one embedder per deployment and keep it.
+
+**EmbeddingGemma 2** is the only permissive embedder here that also embeds images, video and
+audio. On text it scores below Qwen3-Embedding-0.6B on the vendors' own MTEB tables (multilingual
+v2 61.36 vs 64.33, English v2 68.46 vs 70.70). Keep Qwen as the default. Offer EmbeddingGemma 2
+only to sites that need multimodal search. The original `embeddinggemma-300m` is still Gemma terms and gated.
 
 ---
 
@@ -119,7 +130,7 @@ you use MRL truncation to 1024. Pick one embedder per deployment and keep it.
 | IBM Granite 4.2: [3b](https://huggingface.co/ibm-granite/granite-4.2-3b), [8b](https://huggingface.co/ibm-granite/granite-4.2-8b), [30b](https://huggingface.co/ibm-granite/granite-4.2-30b) (2026-08) | dense | 131,072 | apache-2.0 | Official FP8, MXFP4, NVFP4 and GGUF. Thinking on by default (`enable_thinking`). |
 | Phi: [phi-4](https://huggingface.co/microsoft/phi-4) (14.7B, 16k), [Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct) (3.8B, 128k), [Phi-4-reasoning(-plus)](https://huggingface.co/microsoft/Phi-4-reasoning-plus) (32k), [Phi-4-reasoning-vision-15B](https://huggingface.co/microsoft/Phi-4-reasoning-vision-15B) (2026-01) | dense | see left | mit | No Phi-5 on HF as of 2026-10-02. |
 | [nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16) (2026-08) | hybrid Mamba MoE, 31.6B/3B | 262,144 | **other: OpenMDW-1.1** (permissive: attribution and a patent-retaliation clause, no use restrictions) | Add `openmdw-1.1` to the allow-list after review. [Nemotron-3-Nano-30B-A3B](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) uses the *NVIDIA Nemotron Open Model License*. |
-| ⚠ Llama: [Llama-4-Scout](https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct) / Maverick, [Llama-3.3-70B](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) | MoE 109B/17B; dense 70B | — | **llama4** / **llama3.3** (gated) | The [Llama 4 AUP](https://www.llama.com/llama4/use-policy/) withholds the §1(a) rights for **multimodal** Llama 4 models from EU-domiciled individuals and companies. The licence has a 700M-MAU clause. No newer Meta open weights on HF since 2025-04. |
+| ⚠ Llama: [Llama-4-Scout](https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct) / Maverick, [Llama-3.3-70B](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) | MoE 109B/17B; dense 70B | — | **llama4** / **llama3.3** (gated) | The [Llama 4 AUP](https://www.llama.com/llama4/use-policy/) withholds the §1(a) rights for **multimodal** Llama 4 models from EU-domiciled individuals and companies. The licence has a 700M-MAU clause. **Correction (2026-10-11):** Meta's newer open model, [Muse-Glimmer-30B](https://huggingface.co/meta-models/Muse-Glimmer-30B) (2026-08; 29.6B dense with a vision encoder, 131k ctx, official GGUF), is **apache-2.0**, not gated, with a separate usage policy (prohibited-use list). It is not under the Llama licence. Review the usage policy before adding it to the allow-list. About 17 GB in 4-bit, so a 24 GB-tier candidate. |
 | ⚠ [moonshotai/Kimi-K2.6](https://huggingface.co/moonshotai/Kimi-K2.6) (1T), [Kimi-K3](https://huggingface.co/moonshotai/Kimi-K3) (2.8T) | MoE | 262k / 1M | K2.6: modified MIT (display "Kimi K2.6" above 100M MAU or US$20M monthly revenue). K3: **custom**, MaaS > US$20M/yr needs an agreement. | [Kimi-Linear-48B-A3B-Instruct](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct) is plain MIT. |
 | ⚠ [MiniMaxAI/MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7), [MiniMax-M3](https://huggingface.co/MiniMaxAI/MiniMax-M3) | MoE 229B; 427B | 205k; 1M | M2.7: **NON-COMMERCIAL**. M3: MiniMax Community (commercial use needs a notice, or authorization above US$20M/yr) | Exclude. |
 
@@ -152,7 +163,7 @@ Tool calling in vLLM always needs `--enable-auto-tool-choice` together with `--t
 | DeepSeek-V3.1 / V3.2 | `deepseek_v31` / `deepseek_v32` | `deepseek_v3` | `deepseekv31` / `deepseekv32` | registry |
 | Gemma 4 | `gemma4` | `gemma4` | `gemma4` / `gemma4` | [vLLM reasoning docs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/reasoning_outputs.md) |
 | GLM-4.5 / 4.6 / 4.7 / 5.x | `glm45`, `glm47` | `glm45` (also registered as `glm47`) | `glm45`, `glm47` / `glm45` | [GLM-4.7-Flash card](https://huggingface.co/zai-org/GLM-4.7-Flash) |
-| Granite 4.2 | `qwen3_coder` (per IBM card; `granite4` is for Granite 4.0/4.1) | plugin `granite_thinking_parser` shipped in the model card (`--reasoning-parser-plugin`) | `qwen3_coder` / `granite_thinking_parser` (built in) | [Granite 4.2 card](https://huggingface.co/ibm-granite/granite-4.2-8b) |
+| Granite 4.2 | `qwen3_coder` (per IBM card; `granite4` is for Granite 4.0/4.1) | `granite_thinking_parser` (built in from vLLM v0.31.0; on v0.30.0 use the plugin from the model card with `--reasoning-parser-plugin`). The v0.31.0 tool registry points Granite at `granite_engine_tool_parser`. | `qwen3_coder` / `granite_thinking_parser` (built in) | [Granite 4.2 card](https://huggingface.co/ibm-granite/granite-4.2-8b) |
 | Phi-4-mini | `phi4_mini_json` | — | — | registry |
 | Nemotron 3 / 3.5 | `qwen3_coder` | `nemotron_v3` | `qwen3_coder` / `nemotron_3` | [Nemotron 3.5 card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16) |
 | Kimi K2 / K3, MiniMax M2 / M3 | `kimi_k2`, `kimi_k3`, `minimax_m2`, `minimax_m3` | same names (`minimax_m2_append_think` variant) | `kimi_k2`, `kimi_k3`, `minimax-m2`, `minimax-m3` | registry |
@@ -242,11 +253,24 @@ CUDA graphs and activations, and BF16 KV.
 | Tier | Chat (engine) | Embedding | Reranker | VRAM / RAM math |
 |---|---|---|---|---|
 | **CPU only** (≥ 32 GB RAM, 16+ cores; 64 GB comfortable) | **Qwen3.6-35B-A3B Q4_K_M** GGUF (llama.cpp). 3B active, so token rate is close to a dense 3–4B model. Smaller: Qwen3.5-9B Q4_K_M (5.7 GB) or gpt-oss-20b MXFP4 (12.1 GB). | Qwen3-Embedding-0.6B (TEI `cpu-1.9.4`) | bge-reranker-v2-m3 (TEI `cpu-1.9.4`; Qwen3-Reranker is vLLM-only) | 20.4 GB weights + 20 KiB × 32k ctx ≈ 0.7 GB KV + DeltaNet state ≈ **22 GB**. Embedder ≈ 1.5 GB, reranker ≈ 2.5 GB. Total ≈ 26 GB RAM. Expect single-digit to low-double-digit tok/s per stream; benchmark. |
+| **1 × 12 GB** (RTX 5070, RTX 4070, RTX 3060 12 GB) | **Qwen3.5-9B Q4_K_M** GGUF on llama.cpp, 64k ctx. Multilingual and VL. English coding and agent alternative: **[Mellum2.1-12B-A2.5B-Thinking](https://huggingface.co/JetBrains/Mellum2.1-12B-A2.5B-Thinking) Q4_K_M** (apache-2.0, JetBrains, 2026-10; [official GGUF](https://huggingface.co/JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF), 8.1 GB, 2.5B active, English only). | Qwen3-Embedding-0.6B (TEI GPU) | bge-reranker-v2-m3 (TEI) | Qwen: 5.7 GB weights + 32 KiB × 64k ≈ 2 GB KV + DeltaNet state + ≈ 1 GB compute ≈ **9 GB**. Embedder ≈ 1.5 GB. No room for a vLLM reranker, so use TEI. Mellum: 7 full-attn layers × 4 × 128 = 14 KiB/token (plus a fixed 1,024-token sliding-window cache), so 8.1 GB + ≈ 0.9 GB at 64k ≈ 10 GB, leaving room only for the embedder. Estimates; benchmark. |
 | **1 × 24 GB** (L4, A10, RTX 4090/3090) | **Qwen3.5-9B**, online FP8 (`--quantization fp8_per_tensor --language-model-only`), 128k ctx. Alt: **gpt-oss-20b** (≈ 13 GB). | Qwen3-Embedding-0.6B (TEI GPU) | Qwen3-Reranker-0.6B (vLLM, `--gpu-memory-utilization 0.10`) | Chat at util 0.70 = 16.8 GB. Weights ≈ 7.2 GB FP8 linears + 4.1 GB BF16 embeddings/lm_head ≈ 11.3 GB, leaving ≈ 4 GB KV ≈ **120k tokens** total. Reranker 2.4 GB; TEI ≈ 1.5–2 GB. ≈ 21 GB of 24. |
 | **1 × 48 GB** (L40S, RTX 6000 Ada, A6000) | **Qwen3.8-27B-FP8** at 128k ctx with `--kv-cache-dtype fp8`. Throughput alternative: **Qwen3.6-35B-A3B-FP8** (3B active, 20 KiB/token). | Qwen3-Embedding-0.6B | Qwen3-Reranker-0.6B | 27B: util 0.80 = 38.4 GB − 30.9 GB weights − 1.5 GB ≈ 6 GB KV ≈ 100k tokens BF16, **≈ 200k FP8**. The vLLM recipe lists FP8 on "single 40 GB GPU (H100/H200/L40S)". 35B-A3B: 37.5 GB weights leave ≈ 3 GB KV ≈ 150k tokens. |
 | **1 × 80 GB** (H100, A100-80G, H200) | **Qwen3.8-27B-FP8** at the full 262k context. Alternatives: Qwen3.6-35B-A3B-FP8 (throughput) or gpt-oss-120b (≈ 65 GB, all-reasoning). | **Qwen3-Embedding-4B** (2560-d) or keep 0.6B | **Qwen3-Reranker-4B** | Chat at util 0.65 = 52 GB − 30.9 − 1.5 ≈ 19.6 GB KV ≈ **320k tokens** (≈ 640k FP8). Embedder 4B ≈ 9 GB, reranker 4B at util 0.12 ≈ 9.6 GB. |
 | **2 × 80 GB** | **Qwen3.5-122B-A10B-FP8**, TP2 | Qwen3-Embedding-8B | Qwen3-Reranker-8B | 160 GB × 0.90 = 144 − 127 − 3 ≈ 14 GB KV ≈ 600k tokens. Put the embedder/reranker on a third GPU or reduce util. |
 | **4–8 × 80 GB** | **Qwen3.5-397B-A17B-FP8**, TP8 (406 GB), or **DeepSeek-V4-Flash(-0731)** (MIT, ≈ 160 GB). The recipe reports runs at 4–8 × H100. Keep a 1-GPU Qwen3.8-27B-FP8 pool as the cheap/fast tier. | Qwen3-Embedding-8B | Qwen3-Reranker-8B | 397B: 640 × 0.9 = 576 − 406 − 8 ≈ 160 GB KV ≈ 5M tokens. |
+
+**On 12 GB, use llama.cpp, not vLLM.** vLLM's online FP8 needs about 11.3 GB for Qwen3.5-9B
+weights alone, and there is no official 4-bit Qwen3.5-9B for vLLM (only community w4a16 and
+FP8-dynamic repos, checked 2026-10-11). Blackwell cards can run NVFP4, but no vendor publishes an
+NVFP4 model this small. gpt-oss-20b (12.1 GB) does not fit whole. Mellum2.1 reports scores close
+to Qwen3.5-9B: ahead on LiveCodeBench, MBPP+ and BFCL v4, behind on AIME, SWE-bench, Terminal-Bench,
+ToolHop and IFEval (vendor numbers). Larger MoE models can still run with experts in system RAM:
+llama.cpp b11480+ keeps hot experts on the GPU with `--moe-cache-mib N`
+([#29887](https://github.com/ggml-org/llama.cpp/pull/29887); multi-GPU in [#30112](https://github.com/ggml-org/llama.cpp/pull/30112)).
+The PR reports 1.57x to 2.2x decode speed on RTX 4090/5090 at small batches, with about 10% of
+expert size as cache. Try Qwen3.6-35B-A3B Q4_K_M this way on a 12 GB card with 32 GB of RAM, and
+measure before recommending it.
 
 GPU-sharing note: vLLM checks at start-up that the requested `--gpu-memory-utilization × total`
 is free. Several vLLM processes plus TEI on one GPU work only if the fractions add up to under
@@ -258,10 +282,10 @@ is free. Several vLLM processes plus TEI on one GPU work only if the fractions a
 
 | Engine | Models per endpoint | OpenAI surface | Tenant prefix-cache isolation | Fit for Caliban |
 |---|---|---|---|---|
-| **vLLM** (`vllm/vllm-openai:v0.30.0`) | **one base model per server**. Multi-LoRA via `--enable-lora --max-loras --max-lora-rank`; the adapter is chosen by `model`. | `/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`; with `--runner pooling`: `/rerank`, `/v1/rerank`, `/v2/rerank`, `/score` | **`cache_salt`** request field ([design doc](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/design/prefix_caching.md#cache-isolation-for-security)). The salt is injected into the first block hash, so only same-salt requests share KV blocks. Validation ([source](https://github.com/vllm-project/vllm/blob/v0.30.0/vllm/entrypoints/generate/base/protocol.py)): non-empty, **≤ 128 chars, no `@ / \` NUL**. Pooling requests accept it too. | Default engine: one pool per model. |
+| **vLLM** (`vllm/vllm-openai:v0.31.0`; v0.30.0 at snapshot) | **one base model per server**. Multi-LoRA via `--enable-lora --max-loras --max-lora-rank`; the adapter is chosen by `model`. | `/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`; with `--runner pooling`: `/rerank`, `/v1/rerank`, `/v2/rerank`, `/score` | **`cache_salt`** request field ([design doc](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/design/prefix_caching.md#cache-isolation-for-security)). The salt is injected into the first block hash, so only same-salt requests share KV blocks. Validation ([source](https://github.com/vllm-project/vllm/blob/v0.30.0/vllm/entrypoints/generate/base/protocol.py)): non-empty, **≤ 128 chars, no `@ / \` NUL**. Pooling requests accept it too. Validation is unchanged in v0.31.0. | Default engine: one pool per model. Strip per-request `mm_processor_kwargs` and `media_io_kwargs`: from v0.31.0 they error unless the server runs `--trust-request-mm-kwargs`. v0.31.0 also fixes a BF16 GDN prefill divergence on Qwen3.5/3.6/3.8. |
 | **SGLang** (`lmsysorg/sglang:v0.5.21`) | one model per server | OpenAI chat, embeddings | **`cache_salt`** (and `extra_key`) on chat/completions requests. It namespaces the radix tree, storage and KV events (`RadixKey.cache_salt`, [radix_cache.py](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/mem_cache/radix_cache.py)). No server flag needed. | Agent/RAG pools with heavy prefix reuse. |
-| **llama.cpp** `llama-server` (`ghcr.io/ggml-org/llama.cpp:server-b11347`) | one model, or router mode (`--models-dir`, `--models-preset`, `--models-max`, default 4) | chat, completions, `/v1/embeddings` (`--embedding --pooling last`), rerank (`--reranking`) | **none**. Per-slot prompt cache (`--cache-prompt`, `--cache-reuse`). Isolate by a dedicated server per tenant, or `--no-cache-prompt`. | CPU, edge, dev. `--offline` stops network access; `--no-webui` disables the UI. |
-| **Ollama** (`ollama/ollama:0.35.0`) | **many models per endpoint**, loaded on demand (`OLLAMA_MAX_LOADED_MODELS`, default 3 × GPUs; `OLLAMA_KEEP_ALIVE`; `OLLAMA_NUM_PARALLEL`, default 1) | `/v1/chat/completions` (no `tool_choice`, no `logprobs`), `/v1/embeddings`, `/v1/models`. **No rerank.** | none | Small sites and evaluation. Set `OLLAMA_NO_CLOUD=1`. Offline import via a `Modelfile` `FROM /path/model.gguf` or a safetensors dir, or ship a pre-pulled `OLLAMA_MODELS` dir. |
+| **llama.cpp** `llama-server` (`ghcr.io/ggml-org/llama.cpp:server-b11347`) | one model, or router mode (`--models-dir`, `--models-preset`, `--models-max`, default 4) | chat, completions, `/v1/embeddings` (`--embedding --pooling last`), rerank (`--reranking`) | **none**. Per-slot prompt cache (`--cache-prompt`, `--cache-reuse`). Isolate by a dedicated server per tenant, or `--no-cache-prompt`. | CPU, edge, dev. `--offline` stops network access; `--no-webui` disables the UI. Always pass `--port`: builds from b11521 listen on 9931 by default outside Docker (8080 before; [#30159](https://github.com/ggml-org/llama.cpp/pull/30159)). Docker images still use 8080. From b11495 reranker heads read `classifier_activation` ([#29692](https://github.com/ggml-org/llama.cpp/pull/29692)), so re-check reranker score thresholds (granite-embedding-reranker-english-r2 shifted by up to 0.23). |
+| **Ollama** (`ollama/ollama:0.35.0`) | **many models per endpoint**, loaded on demand (`OLLAMA_MAX_LOADED_MODELS`, default 3 × GPUs; `OLLAMA_KEEP_ALIVE`; `OLLAMA_NUM_PARALLEL`, default 1) | `/v1/chat/completions` (no `tool_choice`, no `logprobs`), `/v1/embeddings`, `/v1/models`. **No rerank.** | none | Small sites and evaluation. Set `OLLAMA_NO_CLOUD=1`. Offline import via a `Modelfile` `FROM /path/model.gguf` or a safetensors dir, or ship a pre-pulled `OLLAMA_MODELS` dir. If you move past 0.35, skip [0.40.2](https://github.com/ollama/ollama/releases/tag/v0.40.2): it rewrites pre-pulled models in the background and keeps a backup copy. [0.40.3](https://github.com/ollama/ollama/releases/tag/v0.40.3) turns that off ([#18908](https://github.com/ollama/ollama/pull/18908)). |
 | **TEI** (`ghcr.io/huggingface/text-embeddings-inference:cuda-1.9.4` / `cpu-1.9.4`; per-arch tags `89-1.9.4`, `hopper-1.9.4`, …) | one model | `/v1/embeddings` (OpenAI), `/embed`, `/rerank` (no `/v1/rerank`), `/predict` | n/a (no prefix cache) | Default for embeddings (Qwen3, ModernBERT, XLM-R) and XLM-R/GTE/ModernBERT rerankers, on GPU **and CPU**. Cannot serve Qwen3-Reranker. |
 | Infinity (`michaelfeil/infinity`) | several | OpenAI embeddings + rerank | n/a | Last release 0.0.77 (2025-08). Treat as unmaintained. |
 | TGI | — | — | — | **Archived 2026-03-21.** Do not use. |
@@ -294,6 +318,16 @@ salt. Engines without salt support (llama.cpp, Ollama, TEI) should be dedicated 
 group, or run with prompt caching off. This implements the "never share prefix cache across
 tenants unless opted in" rule from note 07.
 
+Pin vLLM v0.31.0 or later for any pool that serves LoRA adapters and `cache_salt` together.
+Before v0.31.0, LoRA names, `cache_salt` and other extra keys went into one untagged tuple, so a
+salt and an adapter name with the same value hashed to the same cache key and could share KV.
+v0.31.0 tags each key by its source ([#51899](https://github.com/vllm-project/vllm/pull/51899))
+and also hashes the adapter path ([#59335](https://github.com/vllm-project/vllm/pull/59335)). An
+in-place reload from the same path is still not detected, and KV offloaded by v0.30.0 misses after
+the upgrade. The risk to Caliban is low, because Caliban never forwards a client's `cache_salt`; it
+always sets its own. Give every adapter version a new name and a new path. Never reload new
+weights in place. Note that `deploy/helm` and `deploy/compose` in `core` still pin `v0.30.0`.
+
 **Air-gap hygiene per engine.**
 - **vLLM:** `HF_HUB_OFFLINE=1`, `VLLM_NO_USAGE_STATS=1`, `DO_NOT_TRACK=1`, and
   `TIKTOKEN_ENCODINGS_BASE` for gpt-oss.
@@ -310,11 +344,16 @@ All are Apache-2.0 or MIT, pinned by commit in `deploy/airgap/models.lock.yaml`.
 | Tier | Chat | Embedding | Reranker | Bundled by default? |
 |---|---|---|---|---|
 | CPU | `ggml-org/Qwen3.6-35B-A3B-GGUF` (Q4_K_M) | `Qwen/Qwen3-Embedding-0.6B` | `BAAI/bge-reranker-v2-m3` | yes |
+| 1×12 GB | `unsloth/Qwen3.5-9B-GGUF` (Q4_K_M) (alt `JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF` Q4_K_M, English only) | `Qwen/Qwen3-Embedding-0.6B` | `BAAI/bge-reranker-v2-m3` | yes |
 | 1×24 GB | `Qwen/Qwen3.5-9B` (online FP8) | `Qwen/Qwen3-Embedding-0.6B` | `Qwen/Qwen3-Reranker-0.6B` | yes |
 | 1×24 GB alt | `openai/gpt-oss-20b` (+ tiktoken encodings) | — | — | yes (unchanged from v0.1) |
 | 1×48 GB | `Qwen/Qwen3.8-27B-FP8` (alt `Qwen/Qwen3.6-35B-A3B-FP8`) | `Qwen/Qwen3-Embedding-0.6B` | `Qwen/Qwen3-Reranker-0.6B` | optional (`bundle: false`, 31–38 GB) |
 | 1×80 GB | `Qwen/Qwen3.8-27B-FP8` (alt `openai/gpt-oss-120b`) | `Qwen/Qwen3-Embedding-4B` | `Qwen/Qwen3-Reranker-4B` | optional |
 | 2–8×80 GB | `Qwen/Qwen3.5-122B-A10B-FP8` / `Qwen/Qwen3.5-397B-A17B-FP8` / `deepseek-ai/DeepSeek-V4-Flash-0731` | `Qwen/Qwen3-Embedding-8B` | `Qwen/Qwen3-Reranker-8B` | optional |
+
+The Qwen3.5-9B GGUF for 12 GB is a community conversion (unsloth). If the bundle must use only
+first-party artifacts, convert `Qwen/Qwen3.5-9B` with llama.cpp's `convert_hf_to_gguf.py` at the
+pinned build and sign the result.
 
 **Intent mapping used in `core/config/open-models.example.toml`.**
 - `chat`, `summarize` → fast tier with thinking off.
@@ -341,10 +380,13 @@ All are Apache-2.0 or MIT, pinned by commit in `deploy/airgap/models.lock.yaml`.
    enterprise's own employees is "internal Use" under the Qwen Community License 1.0. If it is,
    Qwen3.8-Flash-Next could become an opt-in for 2×80 GB sites.
 5. **Benchmarks.** Every tok/s and concurrency figure here is arithmetic, not measurement. Run
-   `vllm bench serve` per tier and record the results in this note.
+   `vllm bench serve` per tier and record the results in this note. The 12 GB tier and
+   `--moe-cache-mib` are unmeasured.
+6. **Muse-Glimmer-30B usage policy.** Apache-2.0 weights with a separate prohibited-use list.
+   Does `bundle.sh` need a way to record a usage policy next to the licence?
 
 ### Source index
 
 Models: [Qwen org](https://huggingface.co/Qwen) · [Qwen3.6-35B-A3B card](https://huggingface.co/Qwen/Qwen3.6-35B-A3B) · [Qwen3.8-27B card](https://huggingface.co/Qwen/Qwen3.8-27B) · [Qwen3.8-Flash-Next LICENSE](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/main/LICENSE) · [Qwen3.8-2.4T-A95B LICENSE](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B/blob/main/LICENSE) · [Qwen3-8B card](https://huggingface.co/Qwen/Qwen3-8B) · [Qwen3-Embedding-0.6B card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) · [gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b) · [Mistral-Medium-3.5 LICENSE](https://huggingface.co/mistralai/Mistral-Medium-3.5-128B/blob/main/LICENSE) · [DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) · [Gemma 4 licence](https://ai.google.dev/gemma/docs/gemma_4_license) · [GLM-5.3 LICENSE](https://huggingface.co/zai-org/GLM-5.3/blob/main/LICENSE) · [Granite 4.2](https://huggingface.co/ibm-granite/granite-4.2-8b) · [Nemotron 3.5 LICENSE](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16) · [MiniMax-M2.7 LICENSE](https://huggingface.co/MiniMaxAI/MiniMax-M2.7) · [Kimi-K3 LICENSE](https://huggingface.co/moonshotai/Kimi-K3) · [Llama 4 AUP](https://www.llama.com/llama4/use-policy/)
 
-Engines: [vLLM v0.30.0 release](https://github.com/vllm-project/vllm/releases/tag/v0.30.0) · [tool calling](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/tool_calling.md) · [reasoning outputs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/reasoning_outputs.md) · [prefix caching / cache_salt](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/design/prefix_caching.md) · [pooling: scoring](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/models/pooling_models/scoring.md) · [pooling: embed](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/models/pooling_models/embed.md) · [quantization](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/quantization/README.md) · [vLLM recipes](https://recipes.vllm.ai/) · [SGLang v0.5.21 protocol](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/entrypoints/openai/protocol.py) · [llama.cpp server README](https://github.com/ggml-org/llama.cpp/blob/b11346/tools/server/README.md) · [Ollama OpenAI compatibility](https://github.com/ollama/ollama/blob/v0.35.0/docs/api/openai-compatibility.mdx) · [Ollama FAQ](https://github.com/ollama/ollama/blob/v0.35.0/docs/faq.mdx) · [TEI v1.9.4 README](https://github.com/huggingface/text-embeddings-inference/blob/v1.9.4/README.md) · [TGI (archived)](https://github.com/huggingface/text-generation-inference)
+Engines: [vLLM v0.30.0 release](https://github.com/vllm-project/vllm/releases/tag/v0.30.0) · [vLLM v0.31.0 release](https://github.com/vllm-project/vllm/releases/tag/v0.31.0) · [v0.31.0 protocol.py](https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/entrypoints/generate/base/protocol.py) · [llama.cpp b11552 server README](https://github.com/ggml-org/llama.cpp/blob/b11552/tools/server/README.md) · [tool calling](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/tool_calling.md) · [reasoning outputs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/reasoning_outputs.md) · [prefix caching / cache_salt](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/design/prefix_caching.md) · [pooling: scoring](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/models/pooling_models/scoring.md) · [pooling: embed](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/models/pooling_models/embed.md) · [quantization](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/quantization/README.md) · [vLLM recipes](https://recipes.vllm.ai/) · [SGLang v0.5.21 protocol](https://github.com/sgl-project/sglang/blob/v0.5.21/python/sglang/srt/entrypoints/openai/protocol.py) · [llama.cpp server README](https://github.com/ggml-org/llama.cpp/blob/b11346/tools/server/README.md) · [Ollama OpenAI compatibility](https://github.com/ollama/ollama/blob/v0.35.0/docs/api/openai-compatibility.mdx) · [Ollama FAQ](https://github.com/ollama/ollama/blob/v0.35.0/docs/faq.mdx) · [TEI v1.9.4 README](https://github.com/huggingface/text-embeddings-inference/blob/v1.9.4/README.md) · [TGI (archived)](https://github.com/huggingface/text-generation-inference)
