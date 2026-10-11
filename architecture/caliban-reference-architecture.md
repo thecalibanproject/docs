@@ -90,9 +90,9 @@ Each stage is a `tower::Layer`, so each deployment SKU composes its own stack fr
 | 6 | **Cache** | T1 exact (BLAKE3 key incl. ACL fingerprint and datasource epochs) → T2 semantic (allowlisted intents, per-entry threshold, slot equality) | moka, foyer, usearch, Qdrant, fastembed-rs | T1 <5 ms, T2 <15 ms |
 | 7 | **Classify + route** | Rules → embedding kNN → ModernBERT multi-head (intent, difficulty, OOS, jailbreak, PII-presence) → Arch-Router-class LLM fallback for ≤5–10% of traffic → pick a model within the route | `ort`/`candle`, shared embedding | p50 <10 ms without LLM fallback |
 | 8 | **Ground** | Ontology retrieval (filtered by policy *before* retrieval) → lane A (metric compiler), B (validated SQL) or C (doc RAG) | DataFusion, sqlparser-rs, tantivy, Qdrant | Depends on the source |
-| 9 | Execute | A single model call, or a node graph run by the durable executor | tokio, rmcp, Restate or a Postgres journal | — |
-| 10 | Provider adapter | IR → wire format. Per-tenant credentials. Canonical prefix ordering plus `cache_control` / `prompt_cache_key`. Retry budget and circuit breaker. No retry after the first byte. | reqwest/hyper HTTP/2 pools | — |
-| 11 | Stream | SSE passthrough with backpressure, translated to the client's dialect | bounded channels | — |
+| 9 | Execute | A single model call, or a node graph run by the durable executor | tokio, rmcp, Restate or a Postgres journal | n/a |
+| 10 | Provider adapter | IR → wire format. Per-tenant credentials. Canonical prefix ordering plus `cache_control` / `prompt_cache_key`. Retry budget and circuit breaker. No retry after the first byte. | reqwest/hyper HTTP/2 pools | n/a |
+| 11 | Stream | SSE passthrough with backpressure, translated to the client's dialect | bounded channels | n/a |
 | 12 | **Rehydrate** | Aho-Corasick over active surrogates. Hold-back buffer of (longest surrogate − 1) characters. Fuzzy fallback. Miss telemetry. | `aho-corasick` | A few tokens of delay |
 | 13 | Meter | Settle the reservation against actual usage (incl. cached and reasoning tokens). Idempotent UsageEvent → WAL → bus. | NATS/Kafka → ClickHouse | async |
 | 14 | Trace | OTel GenAI span tree. Content capture opt-in only, and never in ZDR mode. | `opentelemetry` | async |

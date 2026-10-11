@@ -64,9 +64,9 @@ suggests (see §4).
 | [Qwen3-Next-80B-A3B-Instruct](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct) / [-Thinking](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Thinking) | 2025-09 | MoE, hybrid attn | 81B / 3B | 262,144 | split checkpoints | apache-2.0 | FP8, GGUF |
 | Qwen3-2507: [4B-Instruct](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507), [30B-A3B-Instruct](https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507), [30B-A3B-Thinking](https://huggingface.co/Qwen/Qwen3-30B-A3B-Thinking-2507), [235B-A22B-Instruct/Thinking](https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507) | 2025-07/08 | dense / MoE | 4B; 30.5B/3B; 235B/22B | 262,144 | **split**: Instruct = no thinking, Thinking = always (the template injects `<think>`) | apache-2.0 | FP8 |
 | [Qwen3-Coder-30B-A3B-Instruct](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct), [Qwen3-Coder-480B-A35B-Instruct](https://huggingface.co/Qwen/Qwen3-Coder-480B-A35B-Instruct) | 2025-07 | MoE | 30.5B/3B; 480B/35B | 262,144 | non-thinking | apache-2.0 | FP8 |
-| Qwen3 (original): [0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) … [8B](https://huggingface.co/Qwen/Qwen3-8B), [14B](https://huggingface.co/Qwen/Qwen3-14B), [32B](https://huggingface.co/Qwen/Qwen3-32B), [30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B), [235B-A22B](https://huggingface.co/Qwen/Qwen3-235B-A22B) | 2025-04 | dense / MoE | — | **32,768** native (131,072 with YaRN) | **hybrid**: `enable_thinking` + `/think` `/no_think` soft switch | apache-2.0 | FP8, AWQ, GPTQ, GGUF |
-| Qwen3-VL [2B/4B/8B/32B](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct), [30B-A3B](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct), [235B-A22B](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct) | 2025-09/10 | dense / MoE, VL | — | 262,144 | split Instruct / Thinking | apache-2.0 | FP8, GGUF |
-| [Qwen3Guard-Gen](https://huggingface.co/Qwen/Qwen3Guard-Gen-8B) / [-Stream](https://huggingface.co/Qwen/Qwen3Guard-Stream-4B) 0.6/4/8B | 2025-09 | safety classifiers | — | — | — | apache-2.0 | — |
+| Qwen3 (original): [0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) … [8B](https://huggingface.co/Qwen/Qwen3-8B), [14B](https://huggingface.co/Qwen/Qwen3-14B), [32B](https://huggingface.co/Qwen/Qwen3-32B), [30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B), [235B-A22B](https://huggingface.co/Qwen/Qwen3-235B-A22B) | 2025-04 | dense / MoE | n/a | **32,768** native (131,072 with YaRN) | **hybrid**: `enable_thinking` + `/think` `/no_think` soft switch | apache-2.0 | FP8, AWQ, GPTQ, GGUF |
+| Qwen3-VL [2B/4B/8B/32B](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct), [30B-A3B](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct), [235B-A22B](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct) | 2025-09/10 | dense / MoE, VL | n/a | 262,144 | split Instruct / Thinking | apache-2.0 | FP8, GGUF |
+| [Qwen3Guard-Gen](https://huggingface.co/Qwen/Qwen3Guard-Gen-8B) / [-Stream](https://huggingface.co/Qwen/Qwen3Guard-Stream-4B) 0.6/4/8B | 2025-09 | safety classifiers | n/a | n/a | n/a | apache-2.0 | n/a |
 
 ⚠ **Qwen3.8-Flash-Next** ([LICENSE](https://huggingface.co/Qwen/Qwen3.8-Flash-Next/blob/main/LICENSE),
 "Qwen Community License 1.0"): if the licensee or an affiliate runs a "Model as a Service" or
@@ -94,11 +94,11 @@ it the fastest decoder per GPU and the best fit for CPU.
 | [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) | 0.57B | 8192 | 1024-d dense + sparse + ColBERT | mit | vLLM (`BgeM3EmbeddingModel`), TEI, Ollama `bge-m3` |
 | [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3) | 0.57B (2.3 GB) | 8192 | cross-encoder | apache-2.0 | TEI (XLM-RoBERTa: GPU **and CPU**), vLLM |
 | [ibm-granite/granite-embedding-311m-multilingual-r2](https://huggingface.co/ibm-granite/granite-embedding-311m-multilingual-r2) / [97m](https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2) | 0.31B / 0.09B | 32k | ModernBERT | apache-2.0 | TEI (ModernBERT) |
-| [Snowflake/snowflake-arctic-embed-l-v2.0](https://huggingface.co/Snowflake/snowflake-arctic-embed-l-v2.0) | 0.57B | 8192 | — | apache-2.0 | TEI, vLLM |
-| [Alibaba-NLP/gte-multilingual-reranker-base](https://huggingface.co/Alibaba-NLP/gte-multilingual-reranker-base), [mixedbread-ai/mxbai-rerank-large-v2](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v2) | 0.3B / 1.5B | 8k / 32k | — | apache-2.0 | TEI / vLLM (with override) |
-| ⚠ [jinaai/jina-embeddings-v5-text-small](https://huggingface.co/jinaai/jina-embeddings-v5-text-small), [jinaai/jina-reranker-v3](https://huggingface.co/jinaai/jina-reranker-v3) | 0.6B | — | — | **cc-by-nc-4.0** (non-commercial) | exclude |
+| [Snowflake/snowflake-arctic-embed-l-v2.0](https://huggingface.co/Snowflake/snowflake-arctic-embed-l-v2.0) | 0.57B | 8192 | n/a | apache-2.0 | TEI, vLLM |
+| [Alibaba-NLP/gte-multilingual-reranker-base](https://huggingface.co/Alibaba-NLP/gte-multilingual-reranker-base), [mixedbread-ai/mxbai-rerank-large-v2](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v2) | 0.3B / 1.5B | 8k / 32k | n/a | apache-2.0 | TEI / vLLM (with override) |
+| ⚠ [jinaai/jina-embeddings-v5-text-small](https://huggingface.co/jinaai/jina-embeddings-v5-text-small), [jinaai/jina-reranker-v3](https://huggingface.co/jinaai/jina-reranker-v3) | 0.6B | n/a | n/a | **cc-by-nc-4.0** (non-commercial) | exclude |
 | [google/embeddinggemma-2](https://huggingface.co/google/embeddinggemma-2) (2026-10) | 0.74B (0.27B text only) | 8k | 768-d, MRL 128 to 768, text + image + video + audio | apache-2.0 (not gated) | llama.cpp b11452+ ([GGUF](https://huggingface.co/ggml-org/embeddinggemma-2-GGUF), [PR](https://github.com/ggml-org/llama.cpp/pull/30054)). vLLM main only ([#60254](https://github.com/vllm-project/vllm/pull/60254)), and it fails at start-up on RTX and L4 cards until [#60942](https://github.com/vllm-project/vllm/pull/60942) lands. Not in TEI. Use BF16 or FP32, never FP16. |
-| ⚠ [google/embeddinggemma-300m](https://huggingface.co/google/embeddinggemma-300m) | 0.3B | — | — | **gemma** (Gemma terms, gated) | exclude by default |
+| ⚠ [google/embeddinggemma-300m](https://huggingface.co/google/embeddinggemma-300m) | 0.3B | n/a | n/a | **gemma** (Gemma terms, gated) | exclude by default |
 
 **Embedding dimension is a schema decision.** Qdrant collections are created for one
 dimension. Switching from Qwen3-Embedding-0.6B (1024) to 8B (4096) means re-indexing, unless
@@ -119,7 +119,7 @@ only to sites that need multimodal search. The original `embeddinggemma-300m` is
 | [mistralai/Mistral-Small-4-119B-2603](https://huggingface.co/mistralai/Mistral-Small-4-119B-2603) | MoE, 128 experts / 4 active, 119B, VL | 256k (card) | apache-2.0 | `reasoning_effort` `none`/`high` per request. Card: TP2. |
 | [Ministral-3 3B/8B/14B](https://huggingface.co/mistralai/Ministral-3-14B-Instruct-2512) (Instruct, Reasoning, Base; 2512) | dense, VL | 262,144 | apache-2.0 | Official GGUF repos (e.g. [14B-Instruct-2512-GGUF](https://huggingface.co/mistralai/Ministral-3-14B-Instruct-2512-GGUF)). |
 | [Devstral-Small-2-24B-Instruct-2512](https://huggingface.co/mistralai/Devstral-Small-2-24B-Instruct-2512), [Magistral-Small-2509](https://huggingface.co/mistralai/Magistral-Small-2509), [Mistral-Small-3.2-24B-Instruct-2506](https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506) | dense 24B | 393k / 128k / 131k | apache-2.0 | |
-| [Mistral-Large-3-675B-Instruct-2512](https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512), [Leanstral-1.5-119B-A6B](https://huggingface.co/mistralai/Leanstral-1.5-119B-A6B) | MoE 675B; 119B/6B (Lean prover) | — | apache-2.0 | |
+| [Mistral-Large-3-675B-Instruct-2512](https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512), [Leanstral-1.5-119B-A6B](https://huggingface.co/mistralai/Leanstral-1.5-119B-A6B) | MoE 675B; 119B/6B (Lean prover) | n/a | apache-2.0 | |
 | ⚠ [Mistral-Medium-3.5-128B](https://huggingface.co/mistralai/Mistral-Medium-3.5-128B), [Devstral-2-123B-Instruct-2512](https://huggingface.co/mistralai/Devstral-2-123B-Instruct-2512) | dense ~125B | 262,144 | **"Modified MIT"**: no rights at all if company monthly revenue > **US$20M** | Not permissive for enterprises. Exclude. |
 | [deepseek-ai/DeepSeek-V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) ([-0731](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)) / [V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro) ([-0813](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro-0813)) | MoE 284B/13B; 1.6T/49B; FP4 experts + FP8 | 1M | mit | V4-Flash is ~160 GB on disk. 3 reasoning modes (non-think / high / max). |
 | [DeepSeek-V4.1-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash) (2026-09) | multimodal MoE, 552B backbone (+196B Engram memory) | 1M | mit | Needs the new `deepseek_v41` parsers. |
@@ -130,7 +130,7 @@ only to sites that need multimodal search. The original `embeddinggemma-300m` is
 | IBM Granite 4.2: [3b](https://huggingface.co/ibm-granite/granite-4.2-3b), [8b](https://huggingface.co/ibm-granite/granite-4.2-8b), [30b](https://huggingface.co/ibm-granite/granite-4.2-30b) (2026-08) | dense | 131,072 | apache-2.0 | Official FP8, MXFP4, NVFP4 and GGUF. Thinking on by default (`enable_thinking`). |
 | Phi: [phi-4](https://huggingface.co/microsoft/phi-4) (14.7B, 16k), [Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct) (3.8B, 128k), [Phi-4-reasoning(-plus)](https://huggingface.co/microsoft/Phi-4-reasoning-plus) (32k), [Phi-4-reasoning-vision-15B](https://huggingface.co/microsoft/Phi-4-reasoning-vision-15B) (2026-01) | dense | see left | mit | No Phi-5 on HF as of 2026-10-02. |
 | [nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16) (2026-08) | hybrid Mamba MoE, 31.6B/3B | 262,144 | **other: OpenMDW-1.1** (permissive: attribution and a patent-retaliation clause, no use restrictions) | Add `openmdw-1.1` to the allow-list after review. [Nemotron-3-Nano-30B-A3B](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) uses the *NVIDIA Nemotron Open Model License*. |
-| ⚠ Llama: [Llama-4-Scout](https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct) / Maverick, [Llama-3.3-70B](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) | MoE 109B/17B; dense 70B | — | **llama4** / **llama3.3** (gated) | The [Llama 4 AUP](https://www.llama.com/llama4/use-policy/) withholds the §1(a) rights for **multimodal** Llama 4 models from EU-domiciled individuals and companies. The licence has a 700M-MAU clause. **Correction (2026-10-11):** Meta's newer open model, [Muse-Glimmer-30B](https://huggingface.co/meta-models/Muse-Glimmer-30B) (2026-08; 29.6B dense with a vision encoder, 131k ctx, official GGUF), is **apache-2.0**, not gated, with a separate usage policy (prohibited-use list). It is not under the Llama licence. Review the usage policy before adding it to the allow-list. About 17 GB in 4-bit, so a 24 GB-tier candidate. |
+| ⚠ Llama: [Llama-4-Scout](https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct) / Maverick, [Llama-3.3-70B](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) | MoE 109B/17B; dense 70B | n/a | **llama4** / **llama3.3** (gated) | The [Llama 4 AUP](https://www.llama.com/llama4/use-policy/) withholds the §1(a) rights for **multimodal** Llama 4 models from EU-domiciled individuals and companies. The licence has a 700M-MAU clause. **Correction (2026-10-11):** Meta's newer open model, [Muse-Glimmer-30B](https://huggingface.co/meta-models/Muse-Glimmer-30B) (2026-08; 29.6B dense with a vision encoder, 131k ctx, official GGUF), is **apache-2.0**, not gated, with a separate usage policy (prohibited-use list). It is not under the Llama licence. Review the usage policy before adding it to the allow-list. About 17 GB in 4-bit, so a 24 GB-tier candidate. |
 | ⚠ [moonshotai/Kimi-K2.6](https://huggingface.co/moonshotai/Kimi-K2.6) (1T), [Kimi-K3](https://huggingface.co/moonshotai/Kimi-K3) (2.8T) | MoE | 262k / 1M | K2.6: modified MIT (display "Kimi K2.6" above 100M MAU or US$20M monthly revenue). K3: **custom**, MaaS > US$20M/yr needs an agreement. | [Kimi-Linear-48B-A3B-Instruct](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct) is plain MIT. |
 | ⚠ [MiniMaxAI/MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7), [MiniMax-M3](https://huggingface.co/MiniMaxAI/MiniMax-M3) | MoE 229B; 427B | 205k; 1M | M2.7: **NON-COMMERCIAL**. M3: MiniMax Community (commercial use needs a notice, or authorization above US$20M/yr) | Exclude. |
 
@@ -156,7 +156,7 @@ Tool calling in vLLM always needs `--enable-auto-tool-choice` together with `--t
 |---|---|---|---|---|
 | Qwen3.5 / 3.6 / 3.8 | `qwen3_coder` (card) or `qwen3_xml` (vLLM recipe). Both map to the same `qwen3_engine_tool_parser` in v0.30. | `qwen3` | `qwen3_coder` / `qwen3` | [Qwen3.6 card](https://huggingface.co/Qwen/Qwen3.6-35B-A3B), [vLLM recipe](https://recipes.vllm.ai/Qwen/Qwen3.8-27B) |
 | Qwen3 (orig.), Qwen3-2507 | `hermes` | `qwen3` (cards also show `deepseek_r1`) | `qwen25` / `qwen3`; `qwen3-thinking` for -Thinking-2507 | [vLLM tool docs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/tool_calling.md#qwen-models) |
-| Qwen3-Coder(-Next), Qwen3-Coder-30B/480B | `qwen3_xml` (= `qwen3_coder`) | — | `qwen3_coder` | vLLM tool docs |
+| Qwen3-Coder(-Next), Qwen3-Coder-30B/480B | `qwen3_xml` (= `qwen3_coder`) | n/a | `qwen3_coder` | vLLM tool docs |
 | gpt-oss | `openai` | built-in harmony handling (recipe uses no flag; `openai_gptoss` is registered) | `gpt-oss` / `gpt-oss` | [vLLM gpt-oss recipe](https://recipes.vllm.ai/openai/gpt-oss-20b) |
 | Mistral Small 4, Ministral 3, Devstral | `mistral` (+ `--tokenizer-mode mistral --config-format mistral --load-format mistral` for the Mistral-format checkpoints) | `mistral` (reasoning variants, Small 4) | `mistral` / `mistral` | [Ministral-3 card](https://huggingface.co/mistralai/Ministral-3-14B-Instruct-2512), [Mistral-Small-4 card](https://huggingface.co/mistralai/Mistral-Small-4-119B-2603) |
 | DeepSeek-V4 / V4.1 | `deepseek_v4` / `deepseek_v41` | `deepseek_v4` / `deepseek_v41` | `deepseekv4` / `deepseek-v4` (and `v41`) | [vLLM recipe](https://recipes.vllm.ai/deepseek-ai/DeepSeek-V4-Flash) |
@@ -164,10 +164,10 @@ Tool calling in vLLM always needs `--enable-auto-tool-choice` together with `--t
 | Gemma 4 | `gemma4` | `gemma4` | `gemma4` / `gemma4` | [vLLM reasoning docs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/reasoning_outputs.md) |
 | GLM-4.5 / 4.6 / 4.7 / 5.x | `glm45`, `glm47` | `glm45` (also registered as `glm47`) | `glm45`, `glm47` / `glm45` | [GLM-4.7-Flash card](https://huggingface.co/zai-org/GLM-4.7-Flash) |
 | Granite 4.2 | `qwen3_coder` (per IBM card; `granite4` is for Granite 4.0/4.1) | `granite_thinking_parser` (built in from vLLM v0.31.0; on v0.30.0 use the plugin from the model card with `--reasoning-parser-plugin`). The v0.31.0 tool registry points Granite at `granite_engine_tool_parser`. | `qwen3_coder` / `granite_thinking_parser` (built in) | [Granite 4.2 card](https://huggingface.co/ibm-granite/granite-4.2-8b) |
-| Phi-4-mini | `phi4_mini_json` | — | — | registry |
+| Phi-4-mini | `phi4_mini_json` | n/a | n/a | registry |
 | Nemotron 3 / 3.5 | `qwen3_coder` | `nemotron_v3` | `qwen3_coder` / `nemotron_3` | [Nemotron 3.5 card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16) |
 | Kimi K2 / K3, MiniMax M2 / M3 | `kimi_k2`, `kimi_k3`, `minimax_m2`, `minimax_m3` | same names (`minimax_m2_append_think` variant) | `kimi_k2`, `kimi_k3`, `minimax-m2`, `minimax-m3` | registry |
-| Llama 3.x / 4 | `llama3_json`, `llama4_pythonic` (with the example chat template) | — | `llama3` / — | vLLM tool docs |
+| Llama 3.x / 4 | `llama3_json`, `llama4_pythonic` (with the example chat template) | n/a | `llama3` / n/a | vLLM tool docs |
 
 ### 3.2 How reasoning is switched and returned
 
@@ -177,11 +177,11 @@ Tool calling in vLLM always needs `--enable-auto-tool-choice` together with `--t
 | Qwen3-2507 Instruct / Thinking | fixed: off / on | none (separate checkpoints). The Thinking template inserts `<think>`, so the raw output has only `</think>`. | no |
 | Qwen3.5 / 3.6 | thinking on | `chat_template_kwargs: {"enable_thinking": false}`; `preserve_thinking: true` keeps past reasoning (3.6) | **no**. Cards: "does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`." |
 | Qwen3.8-27B | thinking on, `preserve_thinking` on | `enable_thinking`, plus `reasoning_effort` = `xhigh` (default) / `medium` / `low` | no |
-| gpt-oss | always reasons | `reasoning_effort` low / medium / high | — |
+| gpt-oss | always reasons | `reasoning_effort` low / medium / high | n/a |
 | Gemma 4 | thinking **off** | `enable_thinking: true`, or any `reasoning_effort` (vLLM auto-injects `enable_thinking`) | `<\|think\|>` token in the system prompt |
-| Mistral Small 4 | none | `reasoning_effort` `none` / `high` | — |
-| DeepSeek-V4 | — | vLLM: `reasoning_effort` auto-injects `enable_thinking` (V4-Pro listed as needing it) | — |
-| Granite 4.2, Nemotron 3.5, GLM-4.7 | thinking on | `chat_template_kwargs: {"enable_thinking": false}` (GLM template also has `clear_thinking`) | — |
+| Mistral Small 4 | none | `reasoning_effort` `none` / `high` | n/a |
+| DeepSeek-V4 | n/a | vLLM: `reasoning_effort` auto-injects `enable_thinking` (V4-Pro listed as needing it) | n/a |
+| Granite 4.2, Nemotron 3.5, GLM-4.7 | thinking on | `chat_template_kwargs: {"enable_thinking": false}` (GLM template also has `clear_thinking`) | n/a |
 
 **Where the reasoning comes back.** This needs care in Caliban's response normaliser:
 
@@ -189,8 +189,8 @@ Tool calling in vLLM always needs `--enable-auto-tool-choice` together with `--t
 |---|---|---|
 | vLLM v0.30.0 | `message.reasoning` / `delta.reasoning`. Renamed from `reasoning_content`; the [docs](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/reasoning_outputs.md) warn that old clients "could silently read an empty `reasoning_content`". `include_reasoning: false` drops it. `thinking_token_budget` caps it. | `<think>…</think>` stays inline in `content` |
 | SGLang v0.5.21 | `reasoning_content` (`separate_reasoning: true` is the default) | inline |
-| llama.cpp `llama-server` | `reasoning_content` (`--reasoning-format` defaults to `auto`; `deepseek` → `reasoning_content`, `none` → inline, `deepseek-legacy` → both) | — |
-| Ollama v0.35 (OpenAI endpoint) | `reasoning` ([openai.go](https://github.com/ollama/ollama/blob/v0.35.0/openai/openai.go)); the native API uses `message.thinking` | — |
+| llama.cpp `llama-server` | `reasoning_content` (`--reasoning-format` defaults to `auto`; `deepseek` → `reasoning_content`, `none` → inline, `deepseek-legacy` → both) | n/a |
+| Ollama v0.35 (OpenAI endpoint) | `reasoning` ([openai.go](https://github.com/ollama/ollama/blob/v0.35.0/openai/openai.go)); the native API uses `message.thinking` | n/a |
 
 Caliban should read `reasoning` **or** `reasoning_content` from any OpenAI-compatible upstream,
 and emit one canonical field to clients. Set `inline_think_tags = true` only for a deployment
@@ -215,11 +215,11 @@ and any vLLM pool where the parser was left off.
 |---|---|---|---|---|
 | Qwen3.5 / 3.6 / 3.8 | Qwen: 27B, 35B-A3B, 122B-A10B, 397B-A17B, 3.6-27B/35B-A3B, 3.8-27B | Qwen GPTQ-Int4 for 3.5 27B/35B-A3B/122B/397B only. Community AWQ for 3.6 (e.g. [cyankiwi/Qwen3.6-27B-AWQ-INT4](https://huggingface.co/cyankiwi/Qwen3.6-27B-AWQ-INT4), [QuantTrio/Qwen3.6-35B-A3B-AWQ](https://huggingface.co/QuantTrio/Qwen3.6-35B-A3B-AWQ)). | llama.cpp org: [ggml-org/Qwen3.6-35B-A3B-GGUF](https://huggingface.co/ggml-org/Qwen3.6-35B-A3B-GGUF) (Q4_K_M 20.4 GB, Q8_0 36.9 GB), [ggml-org/Qwen3.8-27B-GGUF](https://huggingface.co/ggml-org/Qwen3.8-27B-GGUF) (Q4_K_M 19.0 GB). Community: [unsloth/Qwen3.5-9B-GGUF](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF) (Q4_K_M 5.7 GB). | NVFP4: [nvidia/Qwen3.6-35B-A3B-NVFP4](https://huggingface.co/nvidia/Qwen3.6-35B-A3B-NVFP4), [nvidia/Qwen3.8-27B-NVFP4](https://huggingface.co/nvidia/Qwen3.8-27B-NVFP4) |
 | Qwen3 (2025) | FP8 | AWQ, GPTQ-Int4/Int8 | Qwen GGUF | MLX |
-| gpt-oss | — (MXFP4 native) | — | [ggml-org/gpt-oss-20b-GGUF](https://huggingface.co/ggml-org/gpt-oss-20b-GGUF) (MXFP4, 12.1 GB) | |
-| Gemma 4 | — | Google `-qat-w4a16-ct` | Google `-qat-q4_0-gguf` | |
-| Granite 4.2 | IBM `-fp8` | — | IBM `-GGUF` | `-mxfp4`, `-nvfp4` |
-| Mistral | Ministral/Devstral/Small-4 ship FP8 weights alongside BF16 | — | Mistral `-GGUF` for Ministral 3 and Magistral | Small-4 `-NVFP4` |
-| DeepSeek V4 | FP8 + FP4 mixed natively | — | ggml-org GGUF for V4-Flash | NVIDIA NVFP4 |
+| gpt-oss | n/a (MXFP4 native) | n/a | [ggml-org/gpt-oss-20b-GGUF](https://huggingface.co/ggml-org/gpt-oss-20b-GGUF) (MXFP4, 12.1 GB) | |
+| Gemma 4 | n/a | Google `-qat-w4a16-ct` | Google `-qat-q4_0-gguf` | |
+| Granite 4.2 | IBM `-fp8` | n/a | IBM `-GGUF` | `-mxfp4`, `-nvfp4` |
+| Mistral | Ministral/Devstral/Small-4 ship FP8 weights alongside BF16 | n/a | Mistral `-GGUF` for Ministral 3 and Magistral | Small-4 `-NVFP4` |
+| DeepSeek V4 | FP8 + FP4 mixed natively | n/a | ggml-org GGUF for V4-Flash | NVIDIA NVFP4 |
 
 **Engine support by GPU generation** (from the [vLLM quantization matrix](https://github.com/vllm-project/vllm/blob/v0.30.0/docs/features/quantization/README.md)):
 - FP8 W8A8 (llm-compressor) needs Ada or Hopper and newer.
@@ -288,7 +288,7 @@ is free. Several vLLM processes plus TEI on one GPU work only if the fractions a
 | **Ollama** (`ollama/ollama:0.35.0`) | **many models per endpoint**, loaded on demand (`OLLAMA_MAX_LOADED_MODELS`, default 3 × GPUs; `OLLAMA_KEEP_ALIVE`; `OLLAMA_NUM_PARALLEL`, default 1) | `/v1/chat/completions` (no `tool_choice`, no `logprobs`), `/v1/embeddings`, `/v1/models`. **No rerank.** | none | Small sites and evaluation. Set `OLLAMA_NO_CLOUD=1`. Offline import via a `Modelfile` `FROM /path/model.gguf` or a safetensors dir, or ship a pre-pulled `OLLAMA_MODELS` dir. If you move past 0.35, skip [0.40.2](https://github.com/ollama/ollama/releases/tag/v0.40.2): it rewrites pre-pulled models in the background and keeps a backup copy. [0.40.3](https://github.com/ollama/ollama/releases/tag/v0.40.3) turns that off ([#18908](https://github.com/ollama/ollama/pull/18908)). |
 | **TEI** (`ghcr.io/huggingface/text-embeddings-inference:cuda-1.9.4` / `cpu-1.9.4`; per-arch tags `89-1.9.4`, `hopper-1.9.4`, …) | one model | `/v1/embeddings` (OpenAI), `/embed`, `/rerank` (no `/v1/rerank`), `/predict` | n/a (no prefix cache) | Default for embeddings (Qwen3, ModernBERT, XLM-R) and XLM-R/GTE/ModernBERT rerankers, on GPU **and CPU**. Cannot serve Qwen3-Reranker. |
 | Infinity (`michaelfeil/infinity`) | several | OpenAI embeddings + rerank | n/a | Last release 0.0.77 (2025-08). Treat as unmaintained. |
-| TGI | — | — | — | **Archived 2026-03-21.** Do not use. |
+| TGI | n/a | n/a | n/a | **Archived 2026-03-21.** Do not use. |
 
 **vLLM recipes Caliban relies on:**
 
@@ -346,7 +346,7 @@ All are Apache-2.0 or MIT, pinned by commit in `deploy/airgap/models.lock.yaml`.
 | CPU | `ggml-org/Qwen3.6-35B-A3B-GGUF` (Q4_K_M) | `Qwen/Qwen3-Embedding-0.6B` | `BAAI/bge-reranker-v2-m3` | yes |
 | 1×12 GB | `unsloth/Qwen3.5-9B-GGUF` (Q4_K_M) (alt `JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF` Q4_K_M, English only) | `Qwen/Qwen3-Embedding-0.6B` | `BAAI/bge-reranker-v2-m3` | yes |
 | 1×24 GB | `Qwen/Qwen3.5-9B` (online FP8) | `Qwen/Qwen3-Embedding-0.6B` | `Qwen/Qwen3-Reranker-0.6B` | yes |
-| 1×24 GB alt | `openai/gpt-oss-20b` (+ tiktoken encodings) | — | — | yes (unchanged from v0.1) |
+| 1×24 GB alt | `openai/gpt-oss-20b` (+ tiktoken encodings) | n/a | n/a | yes (unchanged from v0.1) |
 | 1×48 GB | `Qwen/Qwen3.8-27B-FP8` (alt `Qwen/Qwen3.6-35B-A3B-FP8`) | `Qwen/Qwen3-Embedding-0.6B` | `Qwen/Qwen3-Reranker-0.6B` | optional (`bundle: false`, 31–38 GB) |
 | 1×80 GB | `Qwen/Qwen3.8-27B-FP8` (alt `openai/gpt-oss-120b`) | `Qwen/Qwen3-Embedding-4B` | `Qwen/Qwen3-Reranker-4B` | optional |
 | 2–8×80 GB | `Qwen/Qwen3.5-122B-A10B-FP8` / `Qwen/Qwen3.5-397B-A17B-FP8` / `deepseek-ai/DeepSeek-V4-Flash-0731` | `Qwen/Qwen3-Embedding-8B` | `Qwen/Qwen3-Reranker-8B` | optional |
