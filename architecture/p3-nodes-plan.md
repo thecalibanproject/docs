@@ -1,6 +1,6 @@
 # P3 plan: nodes
 
-*Approved 2026-10-10. Built from the reference architecture ([§5.3](caliban-reference-architecture.md#53-nodes-agents--sub-apps), [§8](caliban-reference-architecture.md#8-phased-roadmap)), research note [04](../research/04-agent-orchestration.md), and the state of `core` at `8c1af74`.*
+*Approved 2026-10-10. Built from the reference architecture ([§5.3](caliban-reference-architecture.md#53-nodes-agents--sub-apps), [§8](caliban-reference-architecture.md#8-phased-roadmap)), research note [04](../research/04-agent-orchestration.md), and the state of `core` at `8c1af74`. Status updated 2026-10-11 against `core` at `e61478e`.*
 
 **Goal (from the roadmap):** "Build AI sub-apps." A customer declares a node (prompt, tools, datasource scopes, budgets), publishes a version, and calls it over HTTP or MCP, or lets `caliban/auto` pick it.
 
@@ -8,9 +8,9 @@
 - pass^k and cost per success are reported per node.
 - An AgentDojo-style injection suite runs in CI.
 
-## Where we start
+## Where we started (2026-10-10)
 
-| Piece | State today |
+| Piece | State on 2026-10-10 |
 |---|---|
 | Node spec | `schemas/node.schema.json` and `NodeSpec` in `caliban-nodes`. Static checks: MCP tools must be pinned, workflows need a graph, and every cycle needs `max_iterations`. |
 | Node storage | The CP stores node versions (`NodeRecord`: tenant, name, version, spec, soft delete) behind `NodesRead` / `NodesWrite`. The routers never see them. |
@@ -18,6 +18,55 @@
 | MCP | Tool-manifest pinning (sha256 over name, description and schema). No client and no server. |
 | Executor, journal, templates, plan cache, evals | Not started. |
 | Things P3 builds on and which are already done | SSO and roles, per-tenant DEKs, Idempotency-Key, `caliban/auto` with per-tenant intents and exemplars, semantic cache, PII surrogates, metering with the flat price, CQIR datasource lanes. |
+
+## Status (2026-10-11, `core` at `e61478e`)
+
+M1 to M6 are built. M7 is not started. Of M8, the console and SDK work has started; evals, the injection suite, A2A and WASM have not.
+
+| Milestone | State | Main commits in `core` |
+|---|---|---|
+| M1. Versions deployable | Done | `394d9b9` (migration 0012) |
+| M2. Journal and executor | Done | `1955e2a` journal, `a8a64ae` executor, `54ded16` run API and worker mode, `453c6a4` reference node, `afba8ae` durable sleeps on 429, `0ad33a8` retiring drains runs |
+| M3. Budgets and guards | Done | `465a901` ledgers and spend caps, `6baaddf` usage per node and run, retention |
+| M4. Tools and security | Done, except RAG search | `a0a44fe` MCP client, `0eaa49b` tool registry, `2d81f17` tool calls and PII, `3819f71` taint, `3d55421` datasource tool |
+| M5. HTTP and MCP exposure | Done | `33fc65a` events, cancel, `node/<name>`, MCP server; `4c18f94` key allowlist PATCH; `546e279` audit ingest |
+| M6. `caliban/auto` picks a node | Done | `d64038b` (migration 0023) |
+| M7. Templates and plan cache | Not started | |
+| M8. Evals, console, SDK, the rest | Partly started (see below) | `0663edb` console run endpoints (API only) |
+
+The reference triage node (decision 6) runs end to end in the tests, against a real `rmcp` tool server with minted tokens.
+
+**Built differently from the plan, or not built (M1 to M6):**
+
+| Plan item | What `core` does |
+|---|---|
+| M1: `NodesPublish` and `NodesRun` permissions | Built as `nodes.publish` and `nodes.run`. Tool refs resolve to approved manifests only since M4 (`0eaa49b`). `code` vertices are refused when a version is created. |
+| M2: run modes | Sync and async came in M2. Streaming came with M5 (`33fc65a`), with resumable SSE (`Last-Event-ID`). |
+| M2: model calls never paid twice | True on one worker. Across workers, a step in flight when its worker died is deduplicated only with the shared Valkey Idempotency-Key store. A worker on the in-memory store logs a warning. |
+| M2 (not in the plan) | A model call refused by a tenant quota (429) makes the run sleep durably until `Retry-After`. Retiring a version lets runs in flight finish on it. Workers check the schema and never migrate. |
+| M4: RAG search as a built-in tool | Not built. `caliban-rag` has no retriever yet. The `retrieved` taint label is reserved for it. |
+| M4: datasource tool | Built, read only, on the native MongoDB lane only (other kinds are refused until their lane exists). Entities with a row-level policy are refused, because a node run has no user principal. At most 200 rows. |
+| M4: egress "private IPs blocked" | Built differently. Link-local and cloud metadata addresses are always refused. Loopback only when the deployment allows it. Private ranges are allowed, because on-prem tool servers live there: registering a server is the allowlist. No redirects, no proxy, DNS pinned per connection. |
+| M4: MCP servers | Streamable HTTP only. No stdio servers, so the gateway never spawns processes. |
+| M4: taint labels | Labels are `tool:<server>/<tool>`, `datasource`, `retrieved` and `pii`. There is no label for values from other tenants: tenant data never crosses tenants. |
+| M5: MCP Tasks | Behind `CALIBAN_MCP_TASKS`, and they need the `2026-07-28` protocol. A human step in a synchronous `tools/call` is answered through the run API. |
+| M5 (not in the plan) | `node/<name>` also works on the messages API. Run listing and cancellation on the data plane. Cancelling from the console is not built. |
+| M6: fallback | As planned, with the reason in `x-caliban-route-fallback` (`low_confidence`, `no_node_for_intent`, `node_not_allowed`, `node_unavailable`, `nodes_not_enabled`, `node_over_budget`, `node_input_invalid`). Routes come from the config file, overridden per intent on the control plane. |
+| M8 trace spans | Node model calls get the gateway's `chat` spans. There are no `invoke_agent` or `execute_tool` spans yet. |
+
+**M8 items that already exist:**
+
+| Item | Where | State |
+|---|---|---|
+| Node list, versions and diff | `web` (`d754471`) | Done: a page per node with versions, specs, diffs and the publish lifecycle. |
+| Tools, key allowlists, node caps, cost per node | `web` | Done (`1c31dad`, `985171c`, `dc5fabd`, `4dcdf93`). Not in the plan, but needed. |
+| Run list and trace view | `core` endpoints only | The API exists (`0663edb`: runs, run detail with steps, cost and taint labels). No console page yet. |
+| Inbox for human approvals | `core` endpoints only | The API exists (`0663edb`: inbox, answer as the signed-in user). No console page yet. |
+| MAST failure labels | | Not started. |
+| SDK: author and validate nodes | `sdk-python`, `sdk-typescript` | Spec types and local validation exist from before P3. Neither SDK has versions, publish, the run API or run events. |
+| SDK: run evals | `sdk-python` | A client-side harness exists (`caliban.evals`, `caliban-eval`): golden sets, pass^k, pass@k, cost per success, p50 and p95. It targets a node through `caliban.node`, which `core` does not act on: nodes run through `model: "node/<name>"` or the run API. The TypeScript SDK has no evals. |
+| Evals as a promotion gate, injection suite in CI | | Not started. |
+| A2A, `code` vertices (WASM) | | Not started. |
 
 ## Principles
 
@@ -127,6 +176,7 @@ Each milestone is one batch of work that can be shipped and tested. They are in 
 - A2A agent cards and task states (decision 5).
 - `code` vertices in a wasmtime sandbox (no network, no filesystem, fuel and memory limits).
 - A third AWS run (about $5): executor throughput, journal write cost, plan-cache hit rate, the overhead of a node step against a plain call, and the injection suite against an on-prem model.
+- The exit-criteria evals (golden sets, pass^k, cost per success, the injection suite) can also run locally against an on-prem model, on a compose profile for a 12 GB GPU that is being added to the `deploy` repo. That is enough to develop and gate on them. The AWS run stays in the plan for the throughput and cost numbers.
 
 **Out of P3:**
 - long-term memory (Mem0-style);
@@ -135,7 +185,7 @@ Each milestone is one batch of work that can be shipped and tested. They are in 
 
 Each needs P3 to exist first, and none of them is needed for the exit criteria.
 
-## Decisions (made 2026-10-10)
+## Decisions (1 to 6 made 2026-10-10, 7 made 2026-10-11)
 
 | # | Question | Decision |
 |---|---|---|
@@ -145,13 +195,18 @@ Each needs P3 to exist first, and none of them is needed for the exit criteria.
 | 4 | **Billing for node runs** | No per-run fee for now. A run costs the sum of its model calls at today's prices, and usage shows the cost per run and per node. A node fee can be added later, once we see real run costs. |
 | 5 | **A2A in P3?** | MCP and HTTP first, because every client already speaks them. A2A at the end of P3, in M8, mostly for long-running and cross-organization nodes. |
 | 6 | **First reference node** | Build one real node alongside M2 to M6 as the test case: a triage node (classify the case, ask a clarifying question through the human step, recommend services from a catalogue tool, with PII masked throughout). It doubles as the demo for the health platform conversation. |
+| 7 | **What comes after M6?** (2026-10-11) | The M8 evals (golden sets per node, pass^k, cost per success, the promotion bar) and the AgentDojo-style injection suite in CI come next, before M7, because they are the P3 exit criteria. Then M7, then the rest of M8, then the AWS run. |
 
 ## Order of work
 
-1. M1 and M2 together (the spec, versions, journal and executor).
-2. M3 and M4 (budgets, tools and security).
-3. M5 and M6 (exposure and auto-routing to nodes). At this point a customer can build and call a node, so the reference node and an internal demo come here.
-4. M7 (templates and the plan cache).
-5. M8 (evals, console, SDK, A2A, WASM), then the AWS run.
+1. M1 and M2 together (the spec, versions, journal and executor). Done.
+2. M3 and M4 (budgets, tools and security). Done, except RAG search.
+3. M5 and M6 (exposure and auto-routing to nodes). At this point a customer can build and call a node, so the reference node and an internal demo come here. Done; the reference node runs in the tests.
+4. The M8 evals and the injection suite (decision 7): golden sets per node, pass^k, cost per success, the promotion bar, and the AgentDojo-style suite in CI against every node version with write tools. They can run locally on the 12 GB GPU profile.
+5. M7 (templates and the plan cache).
+6. The rest of M8: the console run list, trace view and inbox (the endpoints exist), MAST labels, the SDKs (versions, runs, events, evals through `node/<name>`), A2A and WASM.
+7. The AWS run.
+
+Before decision 7, the order was M7 after M5 and M6, then all of M8, then the AWS run.
 
 Migrations continue from the next free number after the pre-P3 fixes. Old migrations are never edited.

@@ -265,6 +265,8 @@ Rationale for this order:
 - P3 depends on P2's scopes and policies.
 - P4 is mostly packaging if the trait boundaries are right from P0. **Design the traits for all three SKUs on day one.**
 
+**P3 status (2026-10-11):** M1 to M6 of the [P3 plan](p3-nodes-plan.md#status-2026-10-11-core-at-e61478e) are built in `core`. The evals and the injection suite (the exit criteria) come next, before templates and the plan cache.
+
 ---
 
 ## 9. Decisions
@@ -298,6 +300,9 @@ Rationale for this order:
 - **No per-run fee for now.** A node run costs the sum of its model calls at their normal prices; usage reports cost per run and per node.
 - **MCP and HTTP exposure first, A2A at the end of P3.**
 - **A triage node is the first reference node**, built alongside the executor as the test case and demo.
+
+**Made (2026-10-11), P3 nodes ([plan](p3-nodes-plan.md)):**
+- **Evals before templates.** With M1 to M6 built, the evals (golden sets, pass^k, cost per success, the promotion bar) and the injection suite in CI come next, because they are the P3 exit criteria. Templates and the plan cache (M7) follow.
 
 **Still open:**
 
